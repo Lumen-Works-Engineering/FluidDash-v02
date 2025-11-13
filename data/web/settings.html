@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Settings - FluidDash</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #1a1a1a; color: #fff; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1, h2 { color: #00bfff; }
+    .card { background: #2a2a2a; padding: 20px; margin: 15px 0; border-radius: 8px; }
+    label { display: block; margin: 15px 0 5px; color: #aaa; }
+    input, select { width: 100%; padding: 10px; background: #333; color: #fff;
+                    border: 1px solid #555; border-radius: 5px; box-sizing: border-box; }
+    button { background: #00bfff; color: #fff; border: none; padding: 12px 24px;
+             border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px 0 0; }
+    button:hover { background: #0099cc; }
+    .back-btn { background: #666; }
+    .back-btn:hover { background: #555; }
+    .success { background: #00ff00; color: #000; padding: 10px; border-radius: 5px;
+               margin: 10px 0; display: none; }
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <h1>⚙️ User Settings</h1>
+
+    <form id='settingsForm'>
+      <div class='card'>
+        <h2>Temperature Control</h2>
+        <label>Low Threshold (°C) - Fan starts ramping up</label>
+        <input type='number' name='temp_low' value='%TEMP_LOW%' step='0.5' min='20' max='50'>
+
+        <label>High Threshold (°C) - Fan at 100%</label>
+        <input type='number' name='temp_high' value='%TEMP_HIGH%' step='0.5' min='30' max='80'>
+      </div>
+
+      <div class='card'>
+        <h2>Fan Control</h2>
+        <label>Minimum Fan Speed (%)</label>
+        <input type='number' name='fan_min' value='%FAN_MIN%' min='0' max='100'>
+      </div>
+
+      <div class='card'>
+        <h2>PSU Monitoring</h2>
+        <label>Low Voltage Alert (V)</label>
+        <input type='number' name='psu_low' value='%PSU_LOW%' step='0.1' min='18' max='24'>
+
+        <label>High Voltage Alert (V)</label>
+        <input type='number' name='psu_high' value='%PSU_HIGH%' step='0.1' min='24' max='30'>
+      </div>
+
+      <div class='card'>
+        <h2>Temperature Graph</h2>
+        <label>Graph Timespan (seconds)</label>
+        <select name='graph_time'>
+          <option value='60' %GRAPH_TIME_60%>1 minute</option>
+          <option value='300' %GRAPH_TIME_300%>5 minutes</option>
+          <option value='600' %GRAPH_TIME_600%>10 minutes</option>
+          <option value='1800' %GRAPH_TIME_1800%>30 minutes</option>
+          <option value='3600' %GRAPH_TIME_3600%>60 minutes</option>
+        </select>
+
+        <label>Update Interval (seconds)</label>
+        <select name='graph_interval'>
+          <option value='1' %GRAPH_INT_1%>1 second</option>
+          <option value='5' %GRAPH_INT_5%>5 seconds</option>
+          <option value='10' %GRAPH_INT_10%>10 seconds</option>
+          <option value='30' %GRAPH_INT_30%>30 seconds</option>
+          <option value='60' %GRAPH_INT_60%>60 seconds</option>
+        </select>
+      </div>
+
+      <div class='card'>
+        <h2>Display</h2>
+        <label>Coordinate Decimal Places</label>
+        <select name='coord_decimals'>
+          <option value='2' %COORD_DEC_2%>2 decimals (0.00)</option>
+          <option value='3' %COORD_DEC_3%>3 decimals (0.000)</option>
+        </select>
+      </div>
+
+      <div class='success' id='success'>Settings saved successfully!</div>
+
+      <button type='submit'>💾 Save Settings</button>
+      <button type='button' class='back-btn' onclick='location.href="/"'>← Back</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      let formData = new FormData(this);
+
+      fetch('/api/save', {
+        method: 'POST',
+        body: new URLSearchParams(formData)
+      })
+      .then(r => r.text())
+      .then(msg => {
+        document.getElementById('success').style.display = 'block';
+        setTimeout(() => {
+          document.getElementById('success').style.display = 'none';
+        }, 3000);
+      });
+    });
+  </script>
+</body>
+</html>
