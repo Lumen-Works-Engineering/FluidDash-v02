@@ -1,7 +1,7 @@
 # FluidDash v02 - Refactoring Plan
 **Created:** 2025-11-27 09:32
-**Updated:** 2025-01-17 (Post Phase 1, 2, 7 & Driver Assignment Completion)
-**Status:** Phase 1, 2, 7 & Driver Assignment COMPLETE ✅ | Ready for Phase 4-6
+**Updated:** 2025-01-18 (Post FluidNC Configuration & Phase 4 Start)
+**Status:** Phase 1, 2, 7 & Driver Assignment COMPLETE ✅ | Phase 4 IN PROGRESS 🔄
 
 ---
 
@@ -9,8 +9,9 @@
 
 This refactoring plan documents the transformation of FluidDash v02 from a partially-working prototype with broken storage and JSON rendering to a production-ready standalone temperature/PSU monitoring device with optional WiFi and FluidNC integration.
 
-### Completed Work (2025-01-17)
+### Completed Work (2025-01-17 & 2025-01-18)
 
+**Session 1 (2025-01-17):**
 - ✅ **Phase 1 COMPLETE:** Storage system initialized, HTML files loading from filesystem
 - ✅ **Phase 2 COMPLETE:** JSON screen rendering disabled (hard-coded screens only)
 - ✅ **Phase 7 COMPLETE:** Temperature sensor naming interface with NVS persistence
@@ -18,6 +19,13 @@ This refactoring plan documents the transformation of FluidDash v02 from a parti
 - ✅ **Critical Fixes:** Watchdog timeout boot loop resolved
 - ✅ **Architecture Refactor:** WiFi made optional, standalone mode prioritized
 - ✅ **Device Priority:** Core functionality (temp/PSU/fan) works WITHOUT WiFi
+
+**Session 2 (2025-01-18):**
+- ✅ **FluidNC Configuration UI:** Added enable/disable, IP/hostname, port configuration
+- ✅ **Auto-connect on Boot:** FluidNC connects automatically when enabled
+- ✅ **WiFi Watchdog Fix:** Added watchdog reset during WiFi connection
+- ✅ **JSON Error Responses:** Standardized error handling with `sendJsonError()` helper
+- ✅ **Phase 4 Started:** Web server optimization in progress
 
 ---
 
@@ -409,17 +417,19 @@ OneWire discovery order is non-deterministic. Need explicit mapping between phys
 
 **Goal:** Optimize web server based on FluidNC patterns
 
-**Status:** ⏳ PENDING
+**Status:** 🔄 IN PROGRESS
 
-**Tasks:**
+**Completed Tasks:**
 
-1. Add ETag support for file caching (like FluidNC)
-2. Implement proper cookie-based session handling (if authentication needed)
-3. Add WebSocket keep-alive pings (10-second interval, like FluidNC)
-4. Improve error responses with structured JSON format
-5. Add file upload handler for LittleFS (if needed for future config updates)
-6. Implement captive portal support for AP mode (like FluidNC)
-7. Clean up unused web routes (remove JSON editor routes if not needed)
+1. ✅ Improved error responses with structured JSON format (`sendJsonError()` helper)
+2. ✅ FluidNC configuration UI added to settings.html
+3. ✅ Captive portal evaluated and removed (manual AP setup sufficient)
+
+**Remaining Tasks:**
+
+1. ⏳ Add ETag support for file caching (HIGH priority - performance improvement)
+2. ⏳ Add WebSocket keep-alive pings (LOW priority - optional enhancement)
+3. ⏳ Clean up unused web routes (if any remain)
 
 **Optional Enhancements (from FluidNC):**
 
@@ -506,6 +516,66 @@ OneWire discovery order is non-deterministic. Need explicit mapping between phys
    - Check CPU usage under load
    - Verify no memory leaks
    - Test watchdog stability
+
+---
+
+## ⏳ Phase 8: Touchscreen Navigation (Future Enhancement)
+
+**Goal:** Implement touchscreen-based mode navigation to replace physical button
+
+**Status:** ⏳ DEFERRED (After Phase 6 completion)
+
+**Hardware:**
+- XPT2046 touch controller
+- CS: GPIO 33
+- IRQ: GPIO 36
+- Shared SPI bus with display
+
+**Proposed Implementation (Option A - Recommended):**
+
+1. **Navigation Arrows:**
+   - Left arrow (40×60px) at bottom-left corner
+   - Right arrow (40×60px) at bottom-right corner
+   - Cycle through modes: Monitor → Alignment → Graph → Network
+   - Visual feedback on touch (arrow highlight)
+
+2. **Touch Detection:**
+   - Initialize XPT2046 in setup()
+   - Poll for touch in main loop (non-blocking)
+   - Debounce handling (200ms minimum between touches)
+   - Map touch coordinates to navigation zones
+
+3. **Retain Physical Button:**
+   - Keep existing button functionality as backup
+   - Button hold >5s still enters AP mode
+
+**Tasks:**
+
+1. ⏳ Add XPT2046 library dependency to platformio.ini
+2. ⏳ Initialize touch controller in setup()
+3. ⏳ Implement touch polling in main loop
+4. ⏳ Create touch zone detection functions
+5. ⏳ Draw navigation arrows on screen
+6. ⏳ Implement mode cycling logic
+7. ⏳ Add visual feedback for touch events
+8. ⏳ Test touch calibration accuracy
+
+**Files to Modify:**
+- `platformio.ini` - Add XPT2046 library
+- `src/config/pins.h` - Document touch pins (CS=33, IRQ=36)
+- `src/main.cpp` - Touch initialization and polling
+- `src/display/ui_modes.cpp` - Draw navigation arrows
+- `src/config/config.h` - Touch calibration settings (if needed)
+
+**Success Criteria:**
+- ✅ Touch navigation works reliably
+- ✅ No conflicts with display rendering
+- ✅ Touch response time <200ms
+- ✅ Visual feedback visible and clear
+- ✅ Physical button still works as backup
+- ✅ No degradation of display update performance
+
+**Estimated Time:** 3-4 hours
 
 ---
 
@@ -744,67 +814,63 @@ The SD card will be used in a future phase for logging temperature and PSU volta
 
 ---
 
-## Next Steps for Tomorrow
+## Next Steps
 
-**PRIORITY 1: Hardware Testing & Validation**
+**Current Status (2025-01-18):**
+- ✅ Phase 1, 2, 7 complete
+- ✅ Driver Assignment System complete
+- ✅ FluidNC Configuration UI complete
+- 🔄 Phase 4 in progress
 
-1. **Test Driver Assignment Workflow:**
-   - Build and upload firmware: `pio run -e esp32dev -t upload`
-   - Upload filesystem: `pio run -e esp32dev -t uploadfs`
-   - Navigate to `/driver_setup` page
-   - Use "Detect" button workflow to assign all 4 driver sensors
-   - Verify LCD display shows friendly names ("X-Axis:", "Y-Left:", etc.)
-   - Reboot device and confirm assignments persist
-   - Test "Clear" button to unassign sensors
+**PRIORITY 1: Complete Phase 4 (Web Server Optimization)**
 
-2. **Verify Sensor Configuration Page:**
-   - Test `/sensors` page for general sensor naming
-   - Verify temperature refresh works
-   - Test touch detection for sensor identification
+1. **ETag Caching Implementation** (HIGH priority)
+   - Add ETag generation for static files
+   - Implement If-None-Match header handling
+   - Return 304 Not Modified for cached resources
+   - Test bandwidth reduction
 
-**PRIORITY 2: Code Quality & Optimization**
+2. **WebSocket Keep-Alive** (LOW priority, optional)
+   - Add ping interval (10 seconds, like FluidNC)
+   - Implement pong response handling
+   - Test connection stability
 
-3. **Phase 4: Web Server Optimization**
-   - Add ETag caching for static files (reduce bandwidth)
-   - Implement captive portal for AP mode (improve UX)
-   - Add WebSocket keep-alive pings (10-second interval)
-   - Improve error responses with structured JSON
+**PRIORITY 2: Code Cleanup (Phase 5)**
 
-4. **Phase 5: Code Cleanup**
+3. **Remove Unused Code:**
    - Remove unused includes and functions
    - Clean up debug Serial.print statements
-   - Remove unused `/api/reload-screens` endpoint
+   - Remove unused `/api/reload-screens` endpoint (if exists)
    - Update comments to reflect new architecture
-   - Review memory usage and optimize
 
-**PRIORITY 3: Testing & Documentation**
+4. **Memory Optimization:**
+   - Review static allocations
+   - Check for memory leaks
+   - Verify heap usage under load
 
-5. **Phase 6: Final Testing**
+**PRIORITY 3: Testing & Documentation (Phase 6)**
+
+5. **Comprehensive Testing:**
    - 24-hour stability test (check for memory leaks)
    - Test all display modes
    - Verify all web pages load correctly
    - Test WiFi modes (AP, STA, standalone)
-   - Comprehensive feature testing
+   - Test FluidNC connection and monitoring
 
 6. **Documentation Updates:**
-   - Update `CLAUDE.md` with sensor management details
-   - Create migration notes for deployment
-   - Document driver setup workflow for users
+   - Update `CLAUDE.md` with FluidNC configuration details
+   - Document all Phase 4 changes
+   - Update user-facing documentation
 
-**Current State:**
-- ✅ Phase 1, 2, 7, and Driver Assignment System complete
-- ⏳ Ready for hardware testing and validation
-- ⏳ Code optimization and cleanup pending
-- ⏳ Final testing pending
+**DEFERRED TO FUTURE:**
+- Phase 8: Touchscreen Navigation (after Phase 6 complete)
 
-**Expected Timeline:**
-- Day 1 (Tomorrow): Hardware testing + Phase 4 start
-- Day 2: Complete Phase 4 & 5 (optimization & cleanup)
-- Day 3: Phase 6 (comprehensive testing)
-- Day 4: Final documentation and deployment
+**Testing References:**
+- See [TESTING_CHECKLIST.md](TESTING_CHECKLIST.md) for validation procedures
+- See [PROGRESS_LOG.md](PROGRESS_LOG.md) for detailed development history
 
 ---
 
-**Document Version:** 3.0
-**Last Updated:** 2025-01-17 (Post Phase 7 & Driver Assignment Completion)
-**Status:** Phases 1 & 2 Complete, Ready for Phase 7
+**Document Version:** 4.0
+**Last Updated:** 2025-01-18 (Post FluidNC Configuration & Phase 4 Start)
+**Status:** Phase 4 In Progress, Touchscreen Deferred to Phase 8

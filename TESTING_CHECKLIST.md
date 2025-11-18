@@ -1,8 +1,8 @@
-# FluidDash v02 - Tomorrow's Work Plan
+# FluidDash v02 - Testing & Validation Checklist
 
-**Date:** 2025-01-18
-**Current Status:** Phase 1, 2, 7, and Driver Assignment System COMPLETE ✅
-**Focus:** Hardware testing and validation
+**Last Updated:** 2025-01-18
+**Current Status:** Phase 1, 2, 7 & Driver Assignment COMPLETE ✅ | FluidNC Configuration COMPLETE ✅ | Phase 4 IN PROGRESS 🔄
+**Purpose:** Validation procedures and testing workflows for all implemented features
 
 ---
 
@@ -119,6 +119,57 @@ Navigate to `/sensors` page:
 
 ---
 
+## 5. Test FluidNC Configuration (Session 2 - COMPLETE ✅)
+
+### Step-by-Step Testing:
+
+1. **Navigate to Settings Page:**
+   - Access device web interface
+   - Click **"⚙️ User Settings"** button
+   - Scroll to **"🔗 FluidNC Integration (Optional)"** card
+
+2. **Configure FluidNC Connection:**
+   - Check **"Enable FluidNC Integration"** checkbox
+   - Enter FluidNC IP address or hostname (e.g., `fluidnc.local` or `192.168.1.100`)
+   - Enter WebSocket port (default: `81`)
+   - Click **"💾 Save Settings"**
+   - **Expected:** Immediate connection attempt (no reboot required)
+
+3. **Verify Connection:**
+   - Check serial monitor for connection status:
+     ```
+     [FluidNC] Enabled via settings - connecting...
+     [FluidNC] Attempting to connect to ws://fluidnc.local:81/ws
+     [FluidNC] Connected to: /ws
+     ```
+   - Check LCD display (Alignment mode) for FluidNC status
+
+4. **Test Auto-Connect on Boot:**
+   - Reboot device
+   - Verify FluidNC connection re-establishes automatically
+   - Serial should show: `[FluidNC] Auto-discover enabled - connecting...`
+
+5. **Test Disable:**
+   - Uncheck **"Enable FluidNC Integration"**
+   - Click **"💾 Save Settings"**
+   - **Expected:** `[FluidNC] Disabled via settings - disconnecting...`
+   - Verify no connection attempts on reboot
+
+### Success Criteria - FluidNC Configuration ✅ ALL PASSED:
+
+- ✅ FluidNC configuration UI present in settings.html
+- ✅ Enable/disable checkbox works without reboot
+- ✅ IP/hostname field accepts mDNS names (e.g., `fluidnc.local`)
+- ✅ Port configuration saves correctly (default: 81)
+- ✅ Auto-connect on boot when enabled
+- ✅ Immediate connect when enabled via settings
+- ✅ Immediate disconnect when disabled via settings
+- ✅ Connection persists across reboots
+- ✅ No watchdog timeouts during WiFi connection
+- ✅ Clean serial output, helpful status messages
+
+---
+
 ## Success Criteria ✅ - ALL PASSED!
 
 Before proceeding to Phase 4, confirm:
@@ -193,25 +244,44 @@ E (28936) task_wdt:  - loopTask (CPU 1)
 
 ---
 
-## If Everything Works: Next Steps
+## Next Steps - Phase 4 Web Server Optimization
 
-**Phase 4: Web Server Optimization** (Priority 2)
-- Add ETag caching for static files
-- Implement captive portal for AP mode
-- Add WebSocket keep-alive pings
-- Improve error handling with structured JSON responses
+**Status:** 🔄 IN PROGRESS
 
-**Phase 5: Code Cleanup** (Priority 2)
+**Completed in Phase 4:**
+- ✅ JSON error responses (`sendJsonError()` helper function)
+- ✅ FluidNC configuration UI
+- ✅ Captive portal evaluation (removed - not needed)
+
+**Remaining Phase 4 Tasks:**
+
+1. **ETag Caching for Static Files** (HIGH PRIORITY)
+   - Generate ETags for HTML/CSS/JS files
+   - Implement If-None-Match header handling
+   - Return 304 Not Modified responses
+   - Test bandwidth reduction
+
+2. **WebSocket Keep-Alive** (LOW PRIORITY - Optional)
+   - Add ping interval (10 seconds)
+   - Implement pong response handling
+   - Test connection stability
+
+**After Phase 4:**
+
+**Phase 5: Code Cleanup**
 - Remove unused includes and functions
 - Clean up debug Serial.print statements
-- Remove unused `/api/reload-screens` endpoint
+- Remove unused `/api/reload-screens` endpoint (if exists)
 - Update comments to reflect new architecture
 - Review and optimize memory usage
 
-**Phase 6: Final Testing** (Priority 3)
+**Phase 6: Final Testing**
 - 24-hour stability test
 - Memory leak detection
 - Comprehensive feature testing across all modes
+
+**Phase 8: Touchscreen Navigation (DEFERRED)**
+- Touchscreen-based mode navigation (after Phase 6 complete)
 
 ---
 
@@ -256,52 +326,32 @@ E (28936) task_wdt:  - loopTask (CPU 1)
 
 ---
 
+---
+
 ## Documentation References
 
 - **Full refactoring plan:** [Phased_Refactoring_Plan_2025-11-27_0932.md](Phased_Refactoring_Plan_2025-11-27_0932.md)
+- **Development history:** [PROGRESS_LOG.md](PROGRESS_LOG.md)
 - **Project overview:** [CLAUDE.md](CLAUDE.md)
 - **Sensor system details:** CLAUDE.md Section 3 (Sensor Management) and Section 8 (Driver Assignment)
 
 ---
 
+## Testing History
+
+**Session 1 (2025-01-17):**
+- ✅ Phase 1 & 2 tested and validated
+- ✅ Phase 7 tested and validated
+- ✅ Driver Assignment System tested
+- ✅ 2 critical bugs found and fixed (sensor position mapping, watchdog timeouts)
+
+**Session 2 (2025-01-18):**
+- ✅ FluidNC Configuration UI tested and validated
+- ✅ WiFi watchdog timeout fixed
+- ✅ JSON error responses implemented and tested
+- 🔄 Phase 4 in progress (ETag caching pending)
+
 ---
 
-## ⚠️ NEXT STEPS AFTER BUG FIXES (2025-01-18) - ITERATION 2
-
-**Two critical bugs have been fixed (with watchdog fix updated). You need to rebuild and retest:**
-
-### 1. Rebuild Firmware (WITH WATCHDOG FIX #2)
-```bash
-pio run -e esp32dev -t upload
-```
-
-**NOTE:** Previous upload had insufficient watchdog fix. This version adds explicit `esp_task_wdt_reset()` calls.
-
-### 2. Clear Old Sensor Assignments
-Since the position mapping was broken, you should start fresh:
-- Navigate to `/driver_setup` page
-- Click **"Clear"** for all 4 positions
-- This ensures clean state for re-testing
-
-### 3. Re-test Touch Detection
-- Click **"Detect"** for X-Axis position
-- Touch the X-Axis driver sensor (body heat, 3-5 seconds)
-- **Expected:** No watchdog timeout, detection completes successfully
-- Verify sensor UID appears on card
-- Repeat for Y-Left, Y-Right, Z-Axis
-
-### 4. Verify LCD Display
-- Check that positions now match correctly:
-  - Position 1 (top): "X-Axis:" with correct temp
-  - Position 2: "Y-Left:" with correct temp
-  - Position 3: "Y-Right:" with correct temp
-  - Position 4 (bottom): "Z-Axis:" with correct temp
-- Touch each sensor and verify the correct position updates
-
-### 5. Confirm Fixes
-- ✅ No watchdog timeouts during detection
-- ✅ Sensors appear in correct positions on LCD
-- ✅ Friendly names match physical sensor locations
-- ✅ Assignments persist across reboots
-
-**Ready to start? Run the rebuild command above and follow the testing workflow!** 🚀
+**Last Updated:** 2025-01-18
+**Document Purpose:** Testing validation checklist for all implemented features
