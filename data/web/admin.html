@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Admin - FluidDash</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #1a1a1a; color: #fff; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1, h2 { color: #ff6600; }
+    .card { background: #2a2a2a; padding: 20px; margin: 15px 0; border-radius: 8px; }
+    .warning { background: #ff6600; color: #000; padding: 15px; border-radius: 5px;
+               margin: 15px 0; font-weight: bold; }
+    label { display: block; margin: 15px 0 5px; color: #aaa; }
+    input { width: 100%; padding: 10px; background: #333; color: #fff;
+            border: 1px solid #555; border-radius: 5px; box-sizing: border-box; }
+    button { background: #ff6600; color: #fff; border: none; padding: 12px 24px;
+             border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px 0 0; }
+    button:hover { background: #cc5200; }
+    .back-btn { background: #666; }
+    .back-btn:hover { background: #555; }
+    .success { background: #00ff00; color: #000; padding: 10px; border-radius: 5px;
+               margin: 10px 0; display: none; }
+    .current-reading { color: #00bfff; font-size: 18px; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <h1>🔧 Admin & Calibration</h1>
+
+    <div class='warning'>
+      ⚠️ Warning: These settings affect measurement accuracy.
+      Only change if you have calibration equipment.
+    </div>
+
+    <div class='card'>
+      <h2>Current Readings (Uncalibrated)</h2>
+      <div id='readings'>Loading...</div>
+    </div>
+
+    <form id='adminForm'>
+      <div class='card'>
+        <h2>Temperature Calibration</h2>
+        <p style='color:#aaa'>Enter offset to add/subtract from each sensor</p>
+
+        <label>X-Axis Offset (°C)</label>
+        <input type='number' name='cal_x' value='%CAL_X%' step='0.1'>
+
+        <label>YL-Axis Offset (°C)</label>
+        <input type='number' name='cal_yl' value='%CAL_YL%' step='0.1'>
+
+        <label>YR-Axis Offset (°C)</label>
+        <input type='number' name='cal_yr' value='%CAL_YR%' step='0.1'>
+
+        <label>Z-Axis Offset (°C)</label>
+        <input type='number' name='cal_z' value='%CAL_Z%' step='0.1'>
+      </div>
+
+      <div class='card'>
+        <h2>PSU Voltage Calibration</h2>
+        <p style='color:#aaa'>Voltage divider multiplier (measure with multimeter)</p>
+
+        <label>Calibration Factor</label>
+        <input type='number' name='psu_cal' value='%PSU_CAL%' step='0.01' min='5' max='10'>
+      </div>
+
+      <div class='success' id='success'>Calibration saved successfully!</div>
+
+      <button type='submit'>💾 Save Calibration</button>
+      <button type='button' class='back-btn' onclick='location.href="/"'>← Back</button>
+    </form>
+
+    <div class='card' style='margin-top:30px;border-top:3px solid #ff6600'>
+      <h2>🕒 Real-Time Clock (RTC)</h2>
+      <p style='color:#aaa'>Set the current date and time for the DS3231 RTC module</p>
+
+      <div id='currentTime' class='current-reading' style='margin-bottom:20px'>Loading...</div>
+
+      <form id='rtcForm'>
+        <label>Date (YYYY-MM-DD)</label>
+        <input type='date' id='rtcDate' required>
+
+        <label>Time (HH:MM:SS)</label>
+        <input type='time' id='rtcTime' step='1' required>
+
+        <div class='success' id='rtcSuccess'>RTC time set successfully!</div>
+
+        <button type='submit'>⏰ Set RTC Time</button>
+        <button type='button' onclick='setRTCNow()'>📅 Use Browser Time</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function updateReadings() {
+      fetch('/api/status')
+        .then(r => r.json())
+        .then(data => {
+          let html = '';
+          ['X', 'YL', 'YR', 'Z'].forEach((name, i) => {
+            html += `<div class='current-reading'>${name}: ${data.temperatures[i].toFixed(2)}°C</div>`;
+          });
+          html += `<div class='current-reading'>PSU: ${data.psu_voltage.toFixed(2)}V</div>`;
+          document.getElementById('readings').innerHTML = html;
+        });
+    }
+
+    document.getElementById('adminForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      let formData = new FormData(this);
+
+      fetch('/api/admin/save', {
+        method: 'POST',
+        body: new URLSearchParams(formData)
+      })
+      .then(r => r.text())
+      .then(msg => {
+        document.getElementById('success').style.display = 'block';
+        setTimeout(() => {
+          document.getElementById('success').style.display = 'none';
+        }, 3000);
+      });
+    });
+
+    function updateRTCTime() {
+      fetch('/api/rtc')
+        .then(r => r.json())
+        .then(data => {
+          if (data.timestamp) {
+            document.getElementById('currentTime').innerHTML =
+              `Current RTC Time: ${data.timestamp}`;
+          }
+        });
+    }
+
+    function setRTCNow() {
+      const now = new Date();
+      const date = now.toISOString().split('T')[0];
+      const time = now.toTimeString().split(' ')[0];
+      document.getElementById('rtcDate').value = date;
+      document.getElementById('rtcTime').value = time;
+    }
+
+    document.getElementById('rtcForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const date = document.getElementById('rtcDate').value;
+      const time = document.getElementById('rtcTime').value;
+
+      const formData = new URLSearchParams();
+      formData.append('date', date);
+      formData.append('time', time);
+
+      fetch('/api/rtc/set', {
+        method: 'POST',
+        body: formData
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('rtcSuccess').style.display = 'block';
+          setTimeout(() => {
+            document.getElementById('rtcSuccess').style.display = 'none';
+          }, 3000);
+          updateRTCTime();
+        }
+      });
+    });
+
+    updateReadings();
+    updateRTCTime();
+    setInterval(updateReadings, 2000);
+    setInterval(updateRTCTime, 5000);
+  </script>
+</body>
+</html>

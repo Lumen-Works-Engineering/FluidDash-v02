@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Driver Sensor Assignment - FluidDash</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #1a1a1a; color: #fff; }
+    .container { max-width: 700px; margin: 0 auto; }
+    h1, h2 { color: #00bfff; }
+    .card { background: #2a2a2a; padding: 20px; margin: 15px 0; border-radius: 8px; }
+    .driver-card {
+      background: #333; padding: 15px; margin: 10px 0; border-radius: 5px;
+      border-left: 4px solid #00bfff;
+    }
+    .driver-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .driver-name { font-size: 18px; font-weight: bold; color: #00bfff; }
+    .sensor-info {
+      background: #2a2a2a; padding: 10px; border-radius: 5px; margin: 10px 0;
+    }
+    .sensor-uid { color: #888; font-family: monospace; font-size: 12px; }
+    .sensor-temp {
+      color: #00ff00; font-size: 24px; font-weight: bold;
+      display: inline-block; text-align: right;
+    }
+    .not-assigned {
+      color: #ff6600; font-style: italic;
+    }
+    button {
+      background: #00bfff; color: #fff; border: none; padding: 10px 20px;
+      border-radius: 5px; cursor: pointer; font-size: 14px; margin: 5px 3px;
+    }
+    button:hover { background: #0099cc; }
+    button:disabled { background: #666; cursor: not-allowed; }
+    .detect-btn { background: #ff8800; }
+    .detect-btn:hover { background: #ff6600; }
+    .detect-btn:disabled { background: #666; }
+    .clear-btn { background: #ff4444; }
+    .clear-btn:hover { background: #cc0000; }
+    .back-btn { background: #666; }
+    .back-btn:hover { background: #555; }
+    .save-all-btn { background: #00ff00; color: #000; padding: 15px 30px; font-size: 16px; }
+    .save-all-btn:hover { background: #00cc00; }
+    .success {
+      background: #00ff00; color: #000; padding: 10px; border-radius: 5px;
+      margin: 10px 0; display: none;
+    }
+    .error {
+      background: #ff4444; color: #fff; padding: 10px; border-radius: 5px;
+      margin: 10px 0; display: none;
+    }
+    .loading {
+      display: none; color: #00bfff; font-style: italic; margin: 10px 0;
+    }
+    .instructions {
+      background: #2a4a5a; padding: 15px; border-radius: 5px;
+      border-left: 4px solid #00bfff; margin-bottom: 20px;
+    }
+    .instructions h3 { margin-top: 0; color: #00bfff; }
+    .instructions ol { margin: 10px 0; padding-left: 20px; }
+    .instructions li { margin: 5px 0; }
+    .status-message {
+      background: #444; padding: 10px; border-radius: 5px; margin: 10px 0;
+      font-size: 14px; display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <h1>🎯 Driver Sensor Assignment</h1>
+
+    <div class='instructions'>
+      <h3>How to Assign Driver Sensors:</h3>
+      <ol>
+        <li>Click <strong>"Detect"</strong> button for the driver position you want to configure</li>
+        <li>Touch or lightly heat the physical sensor on that driver (body heat works - takes 3-5 seconds)</li>
+        <li>System automatically detects which sensor you touched and assigns it to that position</li>
+        <li>Repeat for all 4 driver positions</li>
+        <li>Sensors will automatically be named "X-Axis", "Y-Left", etc.</li>
+      </ol>
+    </div>
+
+    <div id='message' class='success'></div>
+    <div id='error' class='error'></div>
+    <div id='loading' class='loading'>⏳ Loading...</div>
+    <div id='status-message' class='status-message'></div>
+
+    <div id='drivers-container'></div>
+
+    <div class='card' style='text-align: center;'>
+      <button onclick='location.href="/"' class='back-btn'>← Back to Main</button>
+      <button onclick='location.href="/sensors"' class='back-btn'>🌡️ Advanced Sensor Config</button>
+    </div>
+  </div>
+
+  <script>
+    let drivers = [];
+    let detectingPosition = -1;
+
+    // Load driver assignments on page load
+    window.addEventListener('load', function() {
+      loadDrivers();
+    });
+
+    // Show message helper
+    function showMessage(text, isError = false) {
+      const msgEl = document.getElementById(isError ? 'error' : 'message');
+      const otherEl = document.getElementById(isError ? 'message' : 'error');
+      otherEl.style.display = 'none';
+      msgEl.textContent = text;
+      msgEl.style.display = 'block';
+      setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
+    }
+
+    // Show loading indicator
+    function showLoading(show) {
+      document.getElementById('loading').style.display = show ? 'block' : 'none';
+    }
+
+    // Show status message
+    function showStatus(text, show = true) {
+      const statusEl = document.getElementById('status-message');
+      statusEl.textContent = text;
+      statusEl.style.display = show ? 'block' : 'none';
+    }
+
+    // Load driver assignments
+    async function loadDrivers() {
+      showLoading(true);
+      try {
+        const response = await fetch('/api/drivers/get');
+        const data = await response.json();
+        drivers = data.drivers || [];
+        renderDrivers();
+      } catch (error) {
+        showMessage('Error loading driver assignments: ' + error.message, true);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // Render driver assignment cards
+    function renderDrivers() {
+      const container = document.getElementById('drivers-container');
+      container.innerHTML = '';
+
+      drivers.forEach(driver => {
+        const card = document.createElement('div');
+        card.className = 'driver-card';
+
+        let sensorInfo = '';
+        if (driver.assigned) {
+          sensorInfo = `
+            <div class='sensor-info'>
+              <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <div>
+                  <div class='sensor-uid'>UID: ${driver.uid}</div>
+                </div>
+                <div class='sensor-temp'>${driver.temp.toFixed(1)}°C</div>
+              </div>
+            </div>
+          `;
+        } else {
+          sensorInfo = `
+            <div class='sensor-info'>
+              <div class='not-assigned'>⚠️ Not assigned - Click "Detect" to assign a sensor</div>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class='driver-header'>
+            <div class='driver-name'>${driver.name}</div>
+          </div>
+          ${sensorInfo}
+          <div style='margin-top: 10px;'>
+            <button onclick='detectForPosition(${driver.position})' class='detect-btn'
+                    id='detect-btn-${driver.position}'>
+              🔍 Detect Sensor
+            </button>
+            ${driver.assigned ? `<button onclick='clearPosition(${driver.position})' class='clear-btn'>Clear</button>` : ''}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // Detect sensor for a specific driver position
+    async function detectForPosition(position) {
+      if (detectingPosition !== -1) {
+        showMessage('Detection already in progress', true);
+        return;
+      }
+
+      detectingPosition = position;
+      const positionNames = ['X-Axis', 'Y-Left', 'Y-Right', 'Z-Axis'];
+      const positionName = positionNames[position];
+
+      // Disable all detect buttons
+      for (let i = 0; i < 4; i++) {
+        const btn = document.getElementById('detect-btn-' + i);
+        if (btn) btn.disabled = true;
+      }
+
+      showStatus(`🔍 Touch detection started for ${positionName}...\\n\\nPlease touch the ${positionName} driver sensor now (takes 3-5 seconds)`);
+      showLoading(true);
+
+      try {
+        const response = await fetch('/api/sensors/detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeout: 30000 })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.uid) {
+          // Automatically assign detected sensor to position
+          const assignResponse = await fetch('/api/drivers/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              position: position,
+              uid: data.uid
+            })
+          });
+
+          const assignData = await assignResponse.json();
+
+          if (assignData.success) {
+            showMessage(`✅ ${positionName} sensor detected and assigned!\\nUID: ${data.uid}`);
+            showStatus('', false);
+            loadDrivers();  // Reload to show updated assignment
+          } else {
+            showMessage('Error assigning sensor: ' + assignData.error, true);
+          }
+        } else {
+          showMessage(`⚠️ Touch detection timed out for ${positionName}. No temperature change detected. Try again.`, true);
+          showStatus('', false);
+        }
+      } catch (error) {
+        showMessage('Error during detection: ' + error.message, true);
+        showStatus('', false);
+      } finally {
+        showLoading(false);
+        detectingPosition = -1;
+
+        // Re-enable all detect buttons
+        for (let i = 0; i < 4; i++) {
+          const btn = document.getElementById('detect-btn-' + i);
+          if (btn) btn.disabled = false;
+        }
+      }
+    }
+
+    // Clear sensor assignment from position
+    async function clearPosition(position) {
+      const positionNames = ['X-Axis', 'Y-Left', 'Y-Right', 'Z-Axis'];
+
+      if (!confirm(`Clear sensor assignment from ${positionNames[position]}?`)) {
+        return;
+      }
+
+      showLoading(true);
+      try {
+        const response = await fetch('/api/drivers/clear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ position })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showMessage(`Position ${positionNames[position]} cleared`);
+          loadDrivers();
+        } else {
+          showMessage('Error clearing position: ' + data.error, true);
+        }
+      } catch (error) {
+        showMessage('Error clearing position: ' + error.message, true);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // Refresh temperatures
+    setInterval(async function() {
+      if (detectingPosition === -1) {  // Don't refresh during detection
+        try {
+          const response = await fetch('/api/drivers/get');
+          const data = await response.json();
+
+          // Update temperature displays without full re-render
+          data.drivers.forEach(driver => {
+            const tempEl = document.querySelector(`#drivers-container .driver-card:nth-child(${driver.position + 1}) .sensor-temp`);
+            if (tempEl && driver.assigned) {
+              tempEl.textContent = driver.temp.toFixed(1) + '°C';
+            }
+          });
+        } catch (error) {
+          console.error('Error refreshing temps:', error);
+        }
+      }
+    }, 3000);  // Refresh every 3 seconds
+  </script>
+</body>
+</html>

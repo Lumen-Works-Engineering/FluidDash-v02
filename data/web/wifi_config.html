@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>WiFi Setup - FluidDash</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #1a1a1a; color: #fff; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { color: #00bfff; }
+    h2 { color: #00ff00; }
+    .card { background: #2a2a2a; padding: 20px; margin: 15px 0; border-radius: 8px; }
+    .status { padding: 15px; border-radius: 5px; margin: 15px 0; font-weight: bold; }
+    .status-connected { background: #00ff00; color: #000; }
+    .status-ap { background: #ff9900; color: #000; }
+    .status-disconnected { background: #ff0000; color: #fff; }
+    label { display: block; margin: 15px 0 5px; color: #aaa; }
+    input, select { width: 100%; padding: 10px; background: #333; color: #fff;
+            border: 1px solid #555; border-radius: 5px; box-sizing: border-box;
+            font-size: 16px; }
+    button { background: #00bfff; color: #fff; border: none; padding: 12px 24px;
+             border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px 0 0; }
+    button:hover { background: #0099cc; }
+    .back-btn { background: #666; }
+    .back-btn:hover { background: #555; }
+    .message { padding: 10px; border-radius: 5px; margin: 10px 0; display: none; }
+    .success { background: #00ff00; color: #000; }
+    .error { background: #ff0000; color: #fff; }
+    #password { -webkit-text-security: disc; }
+    .info-box { background: #1a3a5a; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #00bfff; }
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <h1>📡 WiFi Configuration</h1>
+
+%WIFI_STATUS%
+
+    <div class='info-box'>
+      <strong>ℹ️ Manual WiFi Configuration</strong><br>
+      Enter your WiFi network name (SSID) and password below. The device will restart and attempt to connect.
+    </div>
+
+    <form id='wifiForm'>
+      <div class='card'>
+        <h2>WiFi Credentials</h2>
+
+        <label>Network Name (SSID)</label>
+        <input type='text' id='ssid' name='ssid' value='%CURRENT_SSID%' required
+               placeholder='Enter WiFi network name'>
+
+        <label>Password</label>
+        <input type='password' id='password' name='password' required
+               placeholder='Enter WiFi password'>
+
+        <div class='message' id='message'></div>
+
+        <button type='submit'>💾 Save & Connect</button>
+        <button type='button' class='back-btn' onclick='location.href="/"'>← Back</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+
+    document.getElementById('wifiForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      let ssid = document.getElementById('ssid').value;
+      let password = document.getElementById('password').value;
+      let msgDiv = document.getElementById('message');
+
+      msgDiv.style.display = 'block';
+      msgDiv.className = 'message';
+      msgDiv.textContent = 'Connecting to ' + ssid + '...';
+
+      let formData = new FormData();
+      formData.append('ssid', ssid);
+      formData.append('password', password);
+
+      fetch('/api/wifi/connect', {
+        method: 'POST',
+        body: new URLSearchParams(formData)
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          msgDiv.className = 'message success';
+          msgDiv.innerHTML = '✅ Connected successfully!<br>Device will restart in 3 seconds...';
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 3000);
+        } else {
+          msgDiv.className = 'message error';
+          msgDiv.textContent = '❌ Connection failed: ' + data.message;
+        }
+      })
+      .catch(err => {
+        msgDiv.className = 'message error';
+        msgDiv.textContent = '❌ Request failed. Check connection.';
+      });
+    });
+  </script>
+</body>
+</html>

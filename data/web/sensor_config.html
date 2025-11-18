@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Sensor Configuration - FluidDash</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #1a1a1a; color: #fff; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1, h2 { color: #00bfff; }
+    .card { background: #2a2a2a; padding: 20px; margin: 15px 0; border-radius: 8px; }
+    label { display: block; margin: 10px 0 5px; color: #aaa; }
+    input, select, textarea {
+      width: 100%; padding: 10px; background: #333; color: #fff;
+      border: 1px solid #555; border-radius: 5px; box-sizing: border-box;
+    }
+    button {
+      background: #00bfff; color: #fff; border: none; padding: 12px 24px;
+      border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px 0 0;
+    }
+    button:hover { background: #0099cc; }
+    button:disabled { background: #666; cursor: not-allowed; }
+    .back-btn { background: #666; }
+    .back-btn:hover { background: #555; }
+    .success { background: #00ff00; color: #000; padding: 10px; border-radius: 5px;
+               margin: 10px 0; display: none; }
+    .error { background: #ff4444; color: #fff; padding: 10px; border-radius: 5px;
+             margin: 10px 0; display: none; }
+    .sensor-card {
+      background: #333; padding: 15px; margin: 10px 0; border-radius: 5px;
+      border-left: 4px solid #00bfff;
+    }
+    .sensor-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .sensor-uid { color: #888; font-family: monospace; font-size: 12px; }
+    .sensor-temp {
+      color: #00ff00; font-size: 24px; font-weight: bold;
+      display: inline-block; min-width: 80px; text-align: right;
+    }
+    .detect-btn { background: #ff8800; padding: 8px 16px; font-size: 14px; }
+    .detect-btn:hover { background: #ff6600; }
+    .save-btn { background: #00ff00; color: #000; }
+    .save-btn:hover { background: #00cc00; }
+    .loading { display: none; color: #00bfff; font-style: italic; margin: 10px 0; }
+    .instructions {
+      background: #2a4a5a; padding: 15px; border-radius: 5px;
+      border-left: 4px solid #00bfff; margin-bottom: 20px;
+    }
+    .instructions h3 { margin-top: 0; color: #00bfff; }
+    .instructions ol { margin: 10px 0; padding-left: 20px; }
+    .instructions li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <h1>🌡️ Temperature Sensor Configuration</h1>
+
+    <div class='instructions'>
+      <h3>How to Configure Sensors:</h3>
+      <ol>
+        <li>Click <strong>"Scan for Sensors"</strong> to discover all connected DS18B20 sensors</li>
+        <li>To identify a sensor, click <strong>"Detect"</strong> then touch/heat the sensor you want to identify</li>
+        <li>Enter a friendly name (e.g., "X-Axis Motor", "Y-Left Driver", "Spindle")</li>
+        <li>Optionally add notes about the sensor location or purpose</li>
+        <li>Click <strong>"Save"</strong> to store the configuration</li>
+        <li>Repeat for all sensors</li>
+      </ol>
+    </div>
+
+    <div id='message' class='success'></div>
+    <div id='error' class='error'></div>
+    <div id='loading' class='loading'>⏳ Loading...</div>
+
+    <div class='card'>
+      <button onclick='scanSensors()'>🔍 Scan for Sensors</button>
+      <button onclick='refreshTemps()'>🔄 Refresh Temperatures</button>
+      <button onclick='location.href="/"' class='back-btn'>← Back to Main</button>
+    </div>
+
+    <div id='sensors-container'></div>
+
+    <div class='card'>
+      <h2>Configured Sensors</h2>
+      <div id='configured-list'>
+        <p style='color: #888;'>No sensors configured yet. Scan for sensors above.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let discoveredSensors = [];
+    let configuredSensors = [];
+
+    // Load configured sensors on page load
+    window.addEventListener('load', function() {
+      loadConfiguredSensors();
+    });
+
+    // Show message helper
+    function showMessage(text, isError = false) {
+      const msgEl = document.getElementById(isError ? 'error' : 'message');
+      const otherEl = document.getElementById(isError ? 'message' : 'error');
+      otherEl.style.display = 'none';
+      msgEl.textContent = text;
+      msgEl.style.display = 'block';
+      setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
+    }
+
+    // Show loading indicator
+    function showLoading(show) {
+      document.getElementById('loading').style.display = show ? 'block' : 'none';
+    }
+
+    // Scan for all DS18B20 sensors on the bus
+    async function scanSensors() {
+      showLoading(true);
+      try {
+        const response = await fetch('/api/sensors/discover');
+        const data = await response.json();
+        discoveredSensors = data.sensors || [];
+
+        if (discoveredSensors.length === 0) {
+          showMessage('No sensors found. Check connections.', true);
+        } else {
+          showMessage(`Found ${discoveredSensors.length} sensor(s)`);
+          renderSensors();
+        }
+      } catch (error) {
+        showMessage('Error scanning sensors: ' + error.message, true);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // Load configured sensors
+    async function loadConfiguredSensors() {
+      try {
+        const response = await fetch('/api/sensors/list');
+        const data = await response.json();
+        configuredSensors = data.sensors || [];
+        renderConfiguredList();
+      } catch (error) {
+        console.error('Error loading configured sensors:', error);
+      }
+    }
+
+    // Refresh temperatures for all sensors
+    async function refreshTemps() {
+      showLoading(true);
+      try {
+        const response = await fetch('/api/sensors/temps');
+        const data = await response.json();
+
+        // Update temperature displays
+        data.sensors.forEach(sensor => {
+          const tempEl = document.getElementById('temp-' + sensor.uid);
+          if (tempEl) {
+            tempEl.textContent = sensor.temp.toFixed(1) + '°C';
+          }
+        });
+
+        showMessage('Temperatures refreshed');
+      } catch (error) {
+        showMessage('Error refreshing temperatures: ' + error.message, true);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // Render discovered sensors
+    function renderSensors() {
+      const container = document.getElementById('sensors-container');
+      container.innerHTML = '<div class="card"><h2>Discovered Sensors</h2></div>';
+
+      discoveredSensors.forEach((sensor, index) => {
+        // Check if this sensor is already configured
+        const configured = configuredSensors.find(c => c.uid === sensor.uid);
+
+        const sensorCard = document.createElement('div');
+        sensorCard.className = 'sensor-card';
+        sensorCard.innerHTML = `
+          <div class='sensor-header'>
+            <div>
+              <div class='sensor-uid'>UID: ${sensor.uid}</div>
+            </div>
+            <div class='sensor-temp' id='temp-${sensor.uid}'>${sensor.temp.toFixed(1)}°C</div>
+          </div>
+
+          <label>Friendly Name</label>
+          <input type='text' id='name-${sensor.uid}'
+                 value='${configured ? configured.name : ''}'
+                 placeholder='e.g., X-Axis Motor, Y-Left Driver, Spindle'>
+
+          <label>Alias (for code reference)</label>
+          <input type='text' id='alias-${sensor.uid}'
+                 value='${configured ? configured.alias : 'temp' + index}'
+                 placeholder='temp${index}'>
+
+          <label>Notes (optional)</label>
+          <textarea id='notes-${sensor.uid}' rows='2'
+                    placeholder='e.g., Located on left side, near coolant pump'>${configured ? configured.notes : ''}</textarea>
+
+          <button onclick='detectSensor("${sensor.uid}")' class='detect-btn'>
+            🔍 Detect This Sensor
+          </button>
+          <button onclick='saveSensor("${sensor.uid}")' class='save-btn'>
+            💾 Save Configuration
+          </button>
+        `;
+        container.appendChild(sensorCard);
+      });
+    }
+
+    // Render configured sensors list
+    function renderConfiguredList() {
+      const container = document.getElementById('configured-list');
+
+      if (configuredSensors.length === 0) {
+        container.innerHTML = '<p style="color: #888;">No sensors configured yet. Scan for sensors above.</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      configuredSensors.forEach(sensor => {
+        const item = document.createElement('div');
+        item.style.cssText = 'background: #333; padding: 10px; margin: 5px 0; border-radius: 5px;';
+        item.innerHTML = `
+          <strong style='color: #00bfff;'>${sensor.name}</strong>
+          <span style='color: #888; font-family: monospace; font-size: 12px;'>(${sensor.alias})</span>
+          <br>
+          <span style='color: #666; font-size: 12px;'>UID: ${sensor.uid}</span>
+          ${sensor.notes ? '<br><span style="color: #888; font-size: 12px;">📝 ' + sensor.notes + '</span>' : ''}
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // Detect which sensor is being touched
+    async function detectSensor(uid) {
+      showMessage('Touch detection started. Heat or touch the sensor you want to identify...');
+      showLoading(true);
+
+      try {
+        const response = await fetch('/api/sensors/detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeout: 30000 })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.uid) {
+          if (data.uid === uid) {
+            showMessage(`✅ Sensor ${uid} detected! This is the correct sensor.`);
+          } else {
+            showMessage(`⚠️ Different sensor detected: ${data.uid}. Make sure you're touching the right sensor.`, true);
+          }
+        } else {
+          showMessage('Touch detection timed out. No temperature change detected.', true);
+        }
+      } catch (error) {
+        showMessage('Error during touch detection: ' + error.message, true);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // Save sensor configuration
+    async function saveSensor(uid) {
+      const name = document.getElementById('name-' + uid).value.trim();
+      const alias = document.getElementById('alias-' + uid).value.trim();
+      const notes = document.getElementById('notes-' + uid).value.trim();
+
+      if (!name) {
+        showMessage('Please enter a friendly name', true);
+        return;
+      }
+
+      if (!alias) {
+        showMessage('Please enter an alias', true);
+        return;
+      }
+
+      showLoading(true);
+      try {
+        const response = await fetch('/api/sensors/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid, name, alias, notes })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showMessage(`✅ Sensor "${name}" saved successfully!`);
+          loadConfiguredSensors();  // Reload configured sensors list
+        } else {
+          showMessage('Error saving sensor: ' + data.error, true);
+        }
+      } catch (error) {
+        showMessage('Error saving sensor: ' + error.message, true);
+      } finally {
+        showLoading(false);
+      }
+    }
+  </script>
+</body>
+</html>
