@@ -145,20 +145,174 @@ Tested: FluidNC connects successfully via mDNS hostname
 
 ---
 
+## Session 2 (Continued): Phase 4 - ETag Caching Implementation
+
+### Task 3: ETag HTTP Caching ✅ COMPLETE
+
+**Completed Features:**
+1. **ETag Generation Function**
+   - **Location:** `src/web/web_utils.h:55-61`
+   - Uses MD5Builder for content hashing
+   - Returns properly quoted ETag string (RFC 7232 compliant)
+   - Fast hash generation for content verification
+
+2. **Conditional GET Support**
+   - **Function:** `checkETag()` in `src/web/web_utils.h:66-83`
+   - Checks If-None-Match header from client
+   - Returns 304 Not Modified when content matches
+   - Includes ETag header in 304 response
+
+3. **Unified HTML Response Helper**
+   - **Function:** `sendHTMLWithETag()` in `src/web/web_utils.h:88-99`
+   - Automatic ETag checking and generation
+   - Cache-Control header (public, max-age=300)
+   - Works for both HTML and JSON responses
+
+4. **Updated All HTML Handlers:**
+   - `handleRoot()` - Main dashboard
+   - `handleSettings()` - User settings
+   - `handleAdmin()` - Admin/calibration
+   - `handleWiFi()` - WiFi configuration
+   - `handleSensors()` - Sensor configuration
+   - `handleDriverSetup()` - Driver assignment
+   - `handleAPIConfig()` - JSON config API
+   - `handleAPIStatus()` - JSON status API
+
+**Technical Implementation:**
+
+```cpp
+// ETag generation (MD5 hash of content)
+String generateETag(const String& content) {
+    MD5Builder md5;
+    md5.begin();
+    md5.add(content);
+    md5.calculate();
+    return "\"" + md5.toString() + "\"";
+}
+
+// Automatic 304 response when content matches
+sendHTMLWithETag(server, "text/html", htmlContent);
+```
+
+**Performance Benefits:**
+- **Bandwidth Reduction:** 304 responses are ~200 bytes vs. 5-50KB HTML
+- **Faster Page Loads:** Browser uses cached content when available
+- **Reduced Server Load:** Less content generation and transmission
+- **Smart Caching:** ETag updates when content changes (config updates, sensor readings, etc.)
+
+**Cache Strategy:**
+- HTML pages cached for 5 minutes (Cache-Control: max-age=300)
+- ETag validates cache freshness on every request
+- Dynamic content (sensor temps, IP addresses) causes ETag change
+- Browser automatically sends If-None-Match on subsequent requests
+
+**Example HTTP Flow:**
+
+**First Request:**
+```
+GET /settings HTTP/1.1
+
+HTTP/1.1 200 OK
+ETag: "a1b2c3d4e5f6..."
+Cache-Control: public, max-age=300
+Content-Length: 15234
+
+<html>...</html>
+```
+
+**Subsequent Request (content unchanged):**
+```
+GET /settings HTTP/1.1
+If-None-Match: "a1b2c3d4e5f6..."
+
+HTTP/1.1 304 Not Modified
+ETag: "a1b2c3d4e5f6..."
+Content-Length: 0
+```
+
+**Testing Procedure:**
+1. Build and upload firmware
+2. Open browser DevTools (Network tab)
+3. Load any page (e.g., `/settings`)
+4. Verify ETag header in response
+5. Reload page (F5 or Ctrl+R)
+6. Verify 304 Not Modified response
+7. Change a setting and save
+8. Reload page - should see 200 OK (new ETag)
+
+---
+
+## Session 2 (Continued): Phase 5 - Code Cleanup ✅ COMPLETE
+
+### Cleanup Tasks Completed:
+
+**1. Removed Unused Web Routes**
+- **Deleted:** `/api/reload-screens` endpoint (GET and POST)
+- **Reason:** JSON screen rendering disabled in Phase 2
+- **Handler removed:** `handleAPIReloadScreens()` function
+- **Location:** `src/main.cpp:566-575, 922-924, 940-946`
+
+**2. Removed Unused Include Files**
+- **Deleted includes:**
+  - `#include "display/screen_renderer.h"` - JSON screen rendering (Phase 2 disabled)
+  - `#include <LovyanGFX.hpp>` - Already included via display.h
+- **Retained includes:**
+  - `#include <WiFiClientSecure.h>` - Required by WebSocketsClient library (dependency)
+  - ArduinoJson (used directly for JSON APIs)
+- **Location:** `src/main.cpp:15-36`
+
+**3. Updated Header Comments**
+- **Before:** "FluidDash v0.2.001 - CYD Edition with hard coded Screen Layouts"
+- **After:** Comprehensive feature list reflecting current architecture:
+  - Standalone operation emphasis
+  - Touch-based sensor assignment
+  - Optional WiFi and FluidNC
+  - ETag caching
+  - NVS persistence
+- **Location:** `src/main.cpp:1-14`
+
+**4. Cleaned Up Obsolete Code Comments**
+- Removed commented-out JSON editor routes (never implemented)
+- Updated "PROGMEM HTML" section to "HTML & Web Resources"
+- Added note about ETag caching and dual-storage fallback
+- Simplified and modernized inline comments
+- **Location:** Various locations throughout `src/main.cpp`
+
+**5. Fixed ArduinoJson Deprecation Warning**
+- **Changed:** `doc.containsKey("timeout")` → `!doc["timeout"].isNull()`
+- **Reason:** ArduinoJson 7 deprecated `containsKey()` method
+- **Modern syntax:** Use `.isNull()` to check for key existence
+- **Location:** `src/main.cpp:777`
+
+**Code Size Impact:**
+- Removed ~15 lines of commented-out code
+- Removed 2 unnecessary includes (screen_renderer.h, LovyanGFX.hpp)
+- Removed 1 unused function and 2 route registrations
+- Fixed 1 deprecated API call
+- **Estimated:** ~1KB reduction in compiled firmware size
+
+**Memory Impact:**
+- Reduced include overhead
+- Removed unused function call overhead
+- Cleaner code = easier maintenance
+
+---
+
 ## Files Modified Summary (Session 2)
 
 ### Core Files:
-- `src/main.cpp` - FluidNC connection logic, JSON error handlers, watchdog fixes
+- `src/main.cpp` - FluidNC connection logic, JSON error handlers, watchdog fixes, ETag-enabled HTML handlers, code cleanup
 - `src/sensors/sensors.cpp` - Position mapping fix, watchdog timeout fix
 - `src/display/ui_modes.cpp` - Peak temperature tracking fix
-- `src/web/web_utils.h` - JSON error helper function
+- `src/web/web_utils.h` - JSON error helper function, ETag generation and caching functions
 
 ### Web Interface:
 - `data/web/settings.html` - FluidNC configuration card
 
 ### Documentation:
-- `TOMORROW.md` - Updated testing status, documented bugs and fixes
-- `Phase_4_Implementation_Plan.md` - Created for web server optimization tasks
+- `TESTING_CHECKLIST.md` (renamed from TOMORROW.md) - Updated testing status, documented bugs and fixes
+- `Phased_Refactoring_Plan_2025-11-27_0932.md` - Updated with Phase 4 progress and Phase 8 (touchscreen) deferred
+- `PROGRESS_LOG.md` - Comprehensive development history
 
 ---
 
@@ -168,21 +322,18 @@ Tested: FluidNC connects successfully via mDNS hostname
 - Phase 1: Storage System & HTML Integration
 - Phase 2: JSON Screen Rendering Disabled
 - Phase 7: Temperature Sensor Naming & Driver Assignment
+- Phase 4 - Task 1: ETag HTTP Caching ✅
 - Phase 4 - Task 2: Captive Portal (removed - not needed)
-- Phase 4 - Task 3: JSON Error Responses
-- FluidNC Configuration UI (essential feature)
+- Phase 4 - Task 3: JSON Error Responses ✅
+- Phase 5: Code Cleanup & Documentation ✅
+- FluidNC Configuration UI (essential feature) ✅
 
-**⏳ IN PROGRESS:**
-- Phase 4: Web Server Optimization
-
-**📋 REMAINING TASKS:**
-- Phase 4 - Task 1: ETag Caching (HIGH priority)
-- Phase 4 - Task 4: WebSocket Keep-Alive (LOW priority, optional)
-- Phase 5: Code Cleanup & Documentation
+**⏳ REMAINING TASKS:**
+- Phase 4 - Task 4: WebSocket Keep-Alive (LOW priority, optional - may skip)
 - Phase 6: Final Testing & Validation
 
 **🔮 DEFERRED TO FUTURE:**
-- Touchscreen Navigation (new phase after Phase 6)
+- Phase 8: Touchscreen Navigation (after Phase 6)
 
 ---
 

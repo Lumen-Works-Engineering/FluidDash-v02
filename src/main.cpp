@@ -1,30 +1,33 @@
 /*
- * FluidDash v0.2.001 - CYD Edition with hard coded Screen Layouts
+ * FluidDash v0.2 - CYD Edition
  * Configured for ESP32-2432S028 (CYD 3.5" or 4.0" modules)
- * - WiFiManager for initial setup
- * - Preferences for persistent storage
- * - Web interface for all settings
- * - Configurable graph timespan
+ *
+ * Features:
+ * - Standalone temperature/PSU monitoring (works without WiFi)
+ * - 4× DS18B20 temperature sensors with touch-based position assignment
+ * - PSU voltage monitoring and automatic fan control
+ * - Optional WiFi (AP mode for setup, STA mode for operation)
+ * - Web-based configuration interface
+ * - Optional FluidNC CNC controller integration
+ * - ETag-based HTTP caching for web performance
+ * - NVS-based persistent configuration storage
  */
 
 #include <Arduino.h>
 #include "config/pins.h"
 #include "config/config.h"
 #include "display/display.h"
-#include "display/screen_renderer.h"
 #include "display/ui_modes.h"
 #include "sensors/sensors.h"
 #include "network/network.h"
 #include "utils/utils.h"
 #include "web/web_utils.h"
-#include <LovyanGFX.hpp>
 #include <Wire.h>
 #include <RTClib.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <WiFiManager.h>
 #include <WebSocketsClient.h>
-
 #include <Preferences.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
@@ -129,10 +132,10 @@ void IRAM_ATTR tachISR() {
   tachCounter++;
 }
 
-// ============ WEB SERVER HTML TEMPLATES (PROGMEM) ============
-// Moved to individual html files in /data/web/
-// HTML pages are now loaded from filesystem (see data/web/ directory)
-// Storage manager loads from SD card (if available) or LittleFS fallback
+// ========== HTML & Web Resources ==========
+// HTML pages load from filesystem (/data/web/) via StorageManager
+// Dual-storage fallback: SD card (priority) → LittleFS
+// ETag caching enabled for all HTML/JSON responses
 
 // ============ WEB SERVER FUNCTIONS ============
 
@@ -385,19 +388,19 @@ void loop() {
 
 // Web server handler functions
 void handleRoot() {
-  server.send(200, "text/html", getMainHTML());
+  sendHTMLWithETag(server, "text/html", getMainHTML());
 }
 
 void handleSettings() {
-  server.send(200, "text/html", getSettingsHTML());
+  sendHTMLWithETag(server, "text/html", getSettingsHTML());
 }
 
 void handleAdmin() {
-  server.send(200, "text/html", getAdminHTML());
+  sendHTMLWithETag(server, "text/html", getAdminHTML());
 }
 
 void handleWiFi() {
-  server.send(200, "text/html", getWiFiConfigHTML());
+  sendHTMLWithETag(server, "text/html", getWiFiConfigHTML());
 }
 
 void handleSensors() {
@@ -409,7 +412,7 @@ void handleSensors() {
     html = "<html><body><h1>Error: sensor_config.html not found</h1></body></html>";
   }
 
-  server.send(200, "text/html", html);
+  sendHTMLWithETag(server, "text/html", html);
 }
 
 void handleDriverSetup() {
@@ -421,15 +424,15 @@ void handleDriverSetup() {
     html = "<html><body><h1>Error: driver_setup.html not found</h1></body></html>";
   }
 
-  server.send(200, "text/html", html);
+  sendHTMLWithETag(server, "text/html", html);
 }
 
 void handleAPIConfig() {
-  server.send(200, "application/json", getConfigJSON());
+  sendHTMLWithETag(server, "application/json", getConfigJSON());
 }
 
 void handleAPIStatus() {
-  server.send(200, "application/json", getStatusJSON());
+  sendHTMLWithETag(server, "application/json", getStatusJSON());
 }
 
 void handleAPISave() {
@@ -563,16 +566,7 @@ void handleAPIWiFiConnect() {
   ESP.restart();
 }
 
-void handleAPIReloadScreens() {
-    // PHASE 2 FINAL: Reboot-based workflow (avoids mutex/context issues)
-    Serial.println("[API] Layout reload requested - rebooting device");
-
-    server.send(200, "application/json",
-        "{\"status\":\"Rebooting device to load new layouts...\",\"message\":\"Device will restart in 1 second\"}");
-
-    delay(1000);  // Let response send
-    ESP.restart();
-}
+// handleAPIReloadScreens() removed - JSON screen rendering disabled in Phase 2
 
 void handleAPIRTC() {
     // Get current time from RTC
@@ -780,7 +774,7 @@ void handleAPISensorsDetect() {
   if (server.hasArg("plain")) {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, server.arg("plain"));
-    if (!error && doc.containsKey("timeout")) {
+    if (!error && !doc["timeout"].isNull()) {
       timeout = doc["timeout"];
     }
   }
@@ -928,8 +922,7 @@ void setupWebServer() {
       ESP.restart();
   });
   server.on("/api/wifi/connect", HTTP_POST, handleAPIWiFiConnect);
-  server.on("/api/reload-screens", HTTP_POST, handleAPIReloadScreens);
-  server.on("/api/reload-screens", HTTP_GET, handleAPIReloadScreens);  // Also accept GET
+  // /api/reload-screens removed - JSON screen rendering disabled in Phase 2
   server.on("/api/rtc", HTTP_GET, handleAPIRTC);
   server.on("/api/rtc/set", HTTP_POST, handleAPIRTCSet);
 
@@ -944,14 +937,6 @@ void setupWebServer() {
   server.on("/api/drivers/get", HTTP_GET, handleAPIDriversGet);
   server.on("/api/drivers/assign", HTTP_POST, handleAPIDriversAssign);
   server.on("/api/drivers/clear", HTTP_POST, handleAPIDriversClear);
-
-  // REMOVED: JSON screen editor routes (Phase 2 - these handlers were never implemented)
-  // server.on("/api/upload-status", HTTP_GET, handleUploadStatus);
-  // server.on("/upload", HTTP_GET, handleUpload);
-  // server.on("/upload-json", HTTP_POST, handleUploadComplete, handleUploadJSON);
-  // server.on("/get-json", HTTP_GET, handleGetJSON);
-  // server.on("/save-json", HTTP_POST, handleSaveJSON);
-  // server.on("/editor", HTTP_GET, handleEditor);
 
   // 404 handler
   server.onNotFound([]() {
