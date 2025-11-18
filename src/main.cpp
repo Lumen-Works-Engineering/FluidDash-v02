@@ -31,6 +31,7 @@
 #include <SD.h>
 #include <SPI.h>
 #include <ArduinoJson.h>
+#include <esp_task_wdt.h>
 #include "storage_manager.h"
 
 // Storage manager - handles SD/SPIFFS with fallback
@@ -249,6 +250,7 @@ void setup() {
       Serial.print(".");
       wifi_retry++;
       yield();
+      esp_task_wdt_reset();  // Feed watchdog during WiFi connection
     }
     Serial.println();
 
@@ -270,6 +272,13 @@ void setup() {
       setupWebServer();
       webServerStarted = true;
       yield();
+
+      // FluidNC connection (if enabled in settings)
+      if (cfg.fluidnc_auto_discover) {
+        Serial.println("[FluidNC] Auto-discover enabled - connecting...");
+        connectFluidNC();
+        fluidncConnectionAttempted = true;
+      }
     } else {
       // WiFi connection failed - continue in standalone mode
       Serial.println("WiFi connection failed");
@@ -454,7 +463,37 @@ void handleAPISave() {
     cfg.coord_decimal_places = server.arg("coord_decimals").toInt();
   }
 
+  // FluidNC Integration Settings
+  bool fluidncWasEnabled = cfg.fluidnc_auto_discover;
+  bool fluidncNowEnabled = server.hasArg("fluidnc_enabled");
+  cfg.fluidnc_auto_discover = fluidncNowEnabled;
+
+  if (server.hasArg("fluidnc_ip")) {
+    String ip = server.arg("fluidnc_ip");
+    strlcpy(cfg.fluidnc_ip, ip.c_str(), sizeof(cfg.fluidnc_ip));
+  }
+
+  if (server.hasArg("fluidnc_port")) {
+    cfg.fluidnc_port = server.arg("fluidnc_port").toInt();
+  }
+
   saveConfig();
+
+  // If FluidNC was just enabled, connect immediately
+  if (!fluidncWasEnabled && fluidncNowEnabled && WiFi.status() == WL_CONNECTED) {
+    Serial.println("[FluidNC] Enabled via settings - connecting...");
+    connectFluidNC();
+    fluidncConnectionAttempted = true;
+  }
+  // If FluidNC was disabled, disconnect
+  else if (fluidncWasEnabled && !fluidncNowEnabled) {
+    Serial.println("[FluidNC] Disabled via settings - disconnecting...");
+    webSocket.disconnect();
+    fluidncConnectionAttempted = false;
+    fluidncConnected = false;
+    machineState = "OFFLINE";
+  }
+
   server.send(200, "text/plain", "Settings saved successfully");
 }
 
@@ -974,6 +1013,11 @@ String getSettingsHTML() {
   // Replace coordinate decimal places selected options
   html.replace("%COORD_DEC_2%", cfg.coord_decimal_places == 2 ? "selected" : "");
   html.replace("%COORD_DEC_3%", cfg.coord_decimal_places == 3 ? "selected" : "");
+
+  // Replace FluidNC integration settings
+  html.replace("%FLUIDNC_ENABLED%", cfg.fluidnc_auto_discover ? "checked" : "");
+  html.replace("%FLUIDNC_IP%", String(cfg.fluidnc_ip));
+  html.replace("%FLUIDNC_PORT%", String(cfg.fluidnc_port));
 
   return html;
 }

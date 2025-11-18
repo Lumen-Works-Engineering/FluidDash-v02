@@ -12,6 +12,9 @@
     label { display: block; margin: 15px 0 5px; color: #aaa; }
     input, select { width: 100%; padding: 10px; background: #333; color: #fff;
                     border: 1px solid #555; border-radius: 5px; box-sizing: border-box; }
+    input[type='checkbox'] { width: auto; margin-right: 10px; }
+    .checkbox-label { display: inline; color: #fff; font-weight: bold; }
+    .info-text { color: #999; font-size: 14px; margin: 10px 0; line-height: 1.5; }
     button { background: #00bfff; color: #fff; border: none; padding: 12px 24px;
              border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px 0 0; }
     button:hover { background: #0099cc; }
@@ -78,6 +81,29 @@
           <option value='2' %COORD_DEC_2%>2 decimals (0.00)</option>
           <option value='3' %COORD_DEC_3%>3 decimals (0.000)</option>
         </select>
+      </div>
+
+      <div class='card'>
+        <h2>🔗 FluidNC Integration (Optional)</h2>
+        <div class='info-text'>
+          Connect to your FluidNC CNC controller for real-time status monitoring on the Alignment screen.
+          <br><strong>Note:</strong> FluidDash works perfectly as a temperature/PSU monitor without this feature!
+        </div>
+
+        <label style='margin-top: 20px;'>
+          <input type='checkbox' name='fluidnc_enabled' value='1' %FLUIDNC_ENABLED%>
+          <span class='checkbox-label'>Enable FluidNC Integration</span>
+        </label>
+
+        <label>FluidNC IP Address or Hostname</label>
+        <input type='text' name='fluidnc_ip' value='%FLUIDNC_IP%' placeholder='192.168.1.100 or fluidnc.local'>
+
+        <label>FluidNC WebSocket Port</label>
+        <input type='number' name='fluidnc_port' value='%FLUIDNC_PORT%' min='1' max='65535' placeholder='81'>
+
+        <div class='info-text' style='margin-top: 15px;'>
+          💡 <strong>Tip:</strong> FluidNC default WebSocket port is 81. You can find your FluidNC IP address in your router's DHCP table or use mDNS hostname like "fluidnc.local"
+        </div>
       </div>
 
       <div class='success' id='success'>Settings saved successfully!</div>
