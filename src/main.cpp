@@ -16,6 +16,7 @@
 #include "sensors/sensors.h"
 #include "network/network.h"
 #include "utils/utils.h"
+#include "web/web_utils.h"
 #include <LovyanGFX.hpp>
 #include <Wire.h>
 #include <RTClib.h>
@@ -553,8 +554,7 @@ void handleAPIRTC() {
 void handleAPIRTCSet() {
     // Parse date and time from POST parameters
     if (!server.hasArg("date") || !server.hasArg("time")) {
-        server.send(400, "application/json",
-            "{\"success\":false,\"error\":\"Missing date or time parameter\"}");
+        sendJsonError(server, 400, "Missing required parameters", "Both 'date' and 'time' are required");
         return;
     }
 
@@ -575,8 +575,8 @@ void handleAPIRTCSet() {
     if (year < 2000 || year > 2099 || month < 1 || month > 12 ||
         day < 1 || day > 31 || hour < 0 || hour > 23 ||
         minute < 0 || minute > 59 || second < 0 || second > 59) {
-        server.send(400, "application/json",
-            "{\"success\":false,\"error\":\"Invalid date/time values\"}");
+        sendJsonError(server, 400, "Invalid date/time values",
+                     "Date must be YYYY-MM-DD, time must be HH:MM:SS");
         return;
     }
 
@@ -639,7 +639,7 @@ void handleAPISensorsList() {
 // Body: {"uid": "28FF641E8C160450", "name": "X-Driver", "alias": "temp0", "notes": "..."}
 void handleAPISensorsSave() {
   if (!server.hasArg("plain")) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Missing request body\"}");
+    sendJsonError(server, 400, "Missing request body", "POST body with JSON required");
     return;
   }
 
@@ -647,7 +647,7 @@ void handleAPISensorsSave() {
   DeserializationError error = deserializeJson(doc, server.arg("plain"));
 
   if (error) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+    sendJsonError(server, 400, "Invalid JSON", error.c_str());
     return;
   }
 
@@ -658,12 +658,12 @@ void handleAPISensorsSave() {
   String notes = doc["notes"] | "";
 
   if (uidStr.length() != 16) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid UID format\"}");
+    sendJsonError(server, 400, "Invalid UID format", "UID must be 16 hex characters (e.g., 28FF641E8C160450)");
     return;
   }
 
   if (name.length() == 0 || alias.length() == 0) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Name and alias are required\"}");
+    sendJsonError(server, 400, "Missing required fields", "Both 'name' and 'alias' are required");
     return;
   }
 
@@ -795,7 +795,7 @@ void handleAPIDriversGet() {
 // Body: {"position": 0, "uid": "28FF641E8C160450"}
 void handleAPIDriversAssign() {
   if (!server.hasArg("plain")) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Missing request body\"}");
+    sendJsonError(server, 400, "Missing request body", "POST body with JSON required");
     return;
   }
 
@@ -803,7 +803,7 @@ void handleAPIDriversAssign() {
   DeserializationError error = deserializeJson(doc, server.arg("plain"));
 
   if (error) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+    sendJsonError(server, 400, "Invalid JSON", error.c_str());
     return;
   }
 
@@ -811,12 +811,12 @@ void handleAPIDriversAssign() {
   String uidStr = doc["uid"] | "";
 
   if (position < 0 || position > 3) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid position (must be 0-3)\"}");
+    sendJsonError(server, 400, "Invalid position", "Position must be 0-3 (0=X, 1=YL, 2=YR, 3=Z)");
     return;
   }
 
   if (uidStr.length() != 16) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid UID format\"}");
+    sendJsonError(server, 400, "Invalid UID format", "UID must be 16 hex characters");
     return;
   }
 
@@ -828,7 +828,7 @@ void handleAPIDriversAssign() {
   if (success) {
     server.send(200, "application/json", "{\"success\":true,\"message\":\"Driver assignment saved\"}");
   } else {
-    server.send(500, "application/json", "{\"success\":false,\"error\":\"Failed to assign sensor\"}");
+    sendJsonError(server, 500, "Failed to assign sensor", "Check serial output for details");
   }
 }
 
@@ -836,7 +836,7 @@ void handleAPIDriversAssign() {
 // Body: {"position": 0}
 void handleAPIDriversClear() {
   if (!server.hasArg("plain")) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Missing request body\"}");
+    sendJsonError(server, 400, "Missing request body", "POST body with JSON required");
     return;
   }
 
@@ -844,14 +844,14 @@ void handleAPIDriversClear() {
   DeserializationError error = deserializeJson(doc, server.arg("plain"));
 
   if (error) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+    sendJsonError(server, 400, "Invalid JSON", error.c_str());
     return;
   }
 
   int position = doc["position"] | -1;
 
   if (position < 0 || position > 3) {
-    server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid position (must be 0-3)\"}");
+    sendJsonError(server, 400, "Invalid position", "Position must be 0-3 (0=X, 1=YL, 2=YR, 3=Z)");
     return;
   }
 
