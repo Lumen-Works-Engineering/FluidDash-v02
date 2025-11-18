@@ -225,6 +225,7 @@ void setup() {
 
     Serial.print("AP Mode - IP: ");
     Serial.println(WiFi.softAPIP());
+    Serial.println("[AP] Navigate to http://192.168.4.1/ to configure WiFi");
 
     // Start web server for configuration
     setupWebServer();
@@ -912,6 +913,11 @@ void setupWebServer() {
   // server.on("/get-json", HTTP_GET, handleGetJSON);
   // server.on("/save-json", HTTP_POST, handleSaveJSON);
   // server.on("/editor", HTTP_GET, handleEditor);
+
+  // 404 handler
+  server.onNotFound([]() {
+    server.send(404, "text/plain", "404: Page not found");
+  });
 
   server.begin();
   Serial.println("Web server started");
