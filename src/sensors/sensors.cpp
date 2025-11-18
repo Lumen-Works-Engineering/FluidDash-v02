@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <esp_task_wdt.h>  // For explicit watchdog timer reset
 
 // ========== DS18B20 OneWire Setup ==========
 OneWire oneWire(ONE_WIRE_BUS_1);
@@ -126,14 +127,15 @@ void processAdcReadings() {
     temperatures[i] = 0.0;
   }
 
-  // Read temperatures based on sensor mappings
-  for (size_t i = 0; i < sensorMappings.size() && i < 4; i++) {
-    if (sensorMappings[i].enabled) {
+  // Read temperatures based on sensor mappings and their display positions
+  for (size_t i = 0; i < sensorMappings.size(); i++) {
+    if (sensorMappings[i].enabled && sensorMappings[i].displayPosition >= 0 && sensorMappings[i].displayPosition < 4) {
       float temp = ds18b20Sensors.getTempC(sensorMappings[i].uid);
       if (temp != DEVICE_DISCONNECTED_C && temp > -55.0 && temp < 125.0) {
-        temperatures[i] = temp;
-        if (temp > peakTemps[i]) {
-          peakTemps[i] = temp;
+        int pos = sensorMappings[i].displayPosition;  // Use displayPosition, not array index
+        temperatures[pos] = temp;
+        if (temp > peakTemps[pos]) {
+          peakTemps[pos] = temp;
         }
       }
     }
@@ -444,7 +446,14 @@ String detectTouchedSensor(unsigned long timeoutMs, float thresholdDelta) {
 
   Serial.println("[SENSORS] Establishing temperature baselines...");
   ds18b20Sensors.requestTemperatures();
-  delay(750);  // Wait for conversion (12-bit resolution takes 750ms)
+
+  // Non-blocking wait for conversion (12-bit resolution takes 750ms)
+  unsigned long conversionStart = millis();
+  while (millis() - conversionStart < 750) {
+    delay(50);  // Short delay with frequent yields
+    yield();
+    esp_task_wdt_reset();  // Explicitly reset watchdog timer
+  }
 
   for (const String& uidStr : uids) {
     uint8_t uid[8];
@@ -460,8 +469,14 @@ String detectTouchedSensor(unsigned long timeoutMs, float thresholdDelta) {
 
   while (millis() - startTime < timeoutMs) {
     ds18b20Sensors.requestTemperatures();
-    delay(750);  // Wait for conversion
-    yield();
+
+    // Non-blocking wait for conversion with watchdog feeding
+    conversionStart = millis();
+    while (millis() - conversionStart < 750) {
+      delay(50);  // Short delay with frequent yields
+      yield();
+      esp_task_wdt_reset();  // Explicitly reset watchdog timer
+    }
 
     // Check each sensor for temperature rise
     for (size_t i = 0; i < uids.size(); i++) {
@@ -475,6 +490,9 @@ String detectTouchedSensor(unsigned long timeoutMs, float thresholdDelta) {
         return uids[i];
       }
     }
+
+    yield();  // Additional yield after sensor checking
+    esp_task_wdt_reset();  // Reset watchdog after each check cycle
   }
 
   Serial.println("[SENSORS] Touch detection timed out - no sensor touched");

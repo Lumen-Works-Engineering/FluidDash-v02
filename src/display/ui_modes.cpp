@@ -180,6 +180,9 @@ void drawMonitorMode() {
       currentTemp = getTempByUID(sensor->uid);
       if (isnan(currentTemp)) currentTemp = 0.0;
 
+      // Get peak temp for this position
+      peakTemp = peakTemps[pos];
+
       // Show friendly name (truncated to 12 chars)
       char truncatedName[13];
       strlcpy(truncatedName, sensor->friendlyName, sizeof(truncatedName));
@@ -199,12 +202,12 @@ void drawMonitorMode() {
     sprintf(buffer, "%d%s", (int)currentTemp, cfg.use_fahrenheit ? "F" : "C");
     gfx.print(buffer);
 
-    // Peak temp (smaller, to the right) - skip if no assignment
-    if (sensor || peakTemp > 0.0) {
+    // Peak temp (smaller, to the right)
+    if (peakTemp > 0.0) {
       gfx.setTextSize(1);
       gfx.setTextColor(COLOR_LINE);
       gfx.setCursor(140, 52 + pos * 30);
-      sprintf(buffer, "pk:%d%s", (int)(sensor ? peakTemp : peakTemps[pos]), cfg.use_fahrenheit ? "F" : "C");
+      sprintf(buffer, "pk:%d%s", (int)peakTemp, cfg.use_fahrenheit ? "F" : "C");
       gfx.print(buffer);
     }
 
