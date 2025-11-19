@@ -1,13 +1,12 @@
 #include "ui_modes.h"
 #include "display.h"
 #include "config/config.h"
+#include "state/global_state.h"
 #include <WiFi.h>
 
 // External variables from main.cpp
 extern Config cfg;
-extern bool inAPMode;
 extern bool webServerStarted;
-extern bool fluidncConnected;
 // ========== NETWORK MODE ==========
 
 void drawNetworkMode() {
@@ -25,7 +24,7 @@ void drawNetworkMode() {
   gfx.setTextSize(2);
   gfx.setTextColor(COLOR_TEXT);
 
-  if (inAPMode) {
+  if (network.inAPMode) {
     // AP Mode display
     gfx.setCursor(60, 50);
     gfx.setTextColor(COLOR_WARN);
@@ -103,7 +102,7 @@ void drawNetworkMode() {
       gfx.setCursor(80, 165);
       gfx.printf("http://%s.local", cfg.device_name);
 
-      if (fluidncConnected) {
+      if (fluidnc.connected) {
         gfx.setTextColor(COLOR_TEXT);
         gfx.setCursor(10, 190);
         gfx.print("FluidNC:");

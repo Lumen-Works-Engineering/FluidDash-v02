@@ -1,4 +1,5 @@
 #include "network.h"
+#include "../state/global_state.h"
 #include "config/config.h"
 #include <WiFi.h>
 #include <WiFiManager.h>

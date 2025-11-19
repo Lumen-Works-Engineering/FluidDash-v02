@@ -1,4 +1,5 @@
 #include "sensors.h"
+#include "../state/global_state.h"
 #include "config/pins.h"
 #include "config/config.h"
 #include <Arduino.h>

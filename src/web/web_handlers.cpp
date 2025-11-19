@@ -122,8 +122,8 @@ void handleAPISave() {
     Serial.println("[FluidNC] Disabled via settings - disconnecting...");
     webSocket.disconnect();
     fluidnc.connectionAttempted = false;
-    fluidncConnected = false;
-    machineState = "OFFLINE";
+    fluidnc.connected = false;
+    fluidnc.machineState = "OFFLINE";
   }
 
   server.send(200, "text/plain", "Settings saved successfully");
@@ -754,54 +754,54 @@ String getStatusJSON() {
   // Temperatures
   JsonArray temps = doc["temperatures"].to<JsonArray>();
   for (int i = 0; i < 4; i++) {
-    temps.add(temperatures[i]);
+    temps.add(sensors.temperatures[i]);
   }
 
   // PSU
-  doc["psu_voltage"] = psuVoltage;
-  doc["psu_min"] = psuMin;
-  doc["psu_max"] = psuMax;
+  doc["psu_voltage"] = sensors.psuVoltage;
+  doc["psu_min"] = sensors.psuMin;
+  doc["psu_max"] = sensors.psuMax;
 
   // Fan
-  doc["fan_rpm"] = fanRPM;
-  doc["fan_speed"] = fanSpeed;
+  doc["fan_rpm"] = sensors.fanRPM;
+  doc["fan_speed"] = sensors.fanSpeed;
 
   // FluidNC status
-  doc["fluidnc_connected"] = fluidncConnected;
-  doc["machine_state"] = machineState;
+  doc["fluidnc_connected"] = fluidnc.connected;
+  doc["machine_state"] = fluidnc.machineState;
 
   // Machine positions (work coordinates)
   JsonObject wpos = doc["wpos"].to<JsonObject>();
-  wpos["x"] = wposX;
-  wpos["y"] = wposY;
-  wpos["z"] = wposZ;
-  wpos["a"] = wposA;
+  wpos["x"] = fluidnc.wposX;
+  wpos["y"] = fluidnc.wposY;
+  wpos["z"] = fluidnc.wposZ;
+  wpos["a"] = fluidnc.wposA;
 
   // Machine positions (machine coordinates)
   JsonObject mpos = doc["mpos"].to<JsonObject>();
-  mpos["x"] = posX;
-  mpos["y"] = posY;
-  mpos["z"] = posZ;
-  mpos["a"] = posA;
+  mpos["x"] = fluidnc.posX;
+  mpos["y"] = fluidnc.posY;
+  mpos["z"] = fluidnc.posZ;
+  mpos["a"] = fluidnc.posA;
 
   // Work coordinate offsets
   JsonObject wco = doc["wco"].to<JsonObject>();
-  wco["x"] = wcoX;
-  wco["y"] = wcoY;
-  wco["z"] = wcoZ;
-  wco["a"] = wcoA;
+  wco["x"] = fluidnc.wcoX;
+  wco["y"] = fluidnc.wcoY;
+  wco["z"] = fluidnc.wcoZ;
+  wco["a"] = fluidnc.wcoA;
 
   // Feed and spindle
-  doc["feed_rate"] = feedRate;
-  doc["spindle_rpm"] = spindleRPM;
-  doc["feed_override"] = feedOverride;
-  doc["rapid_override"] = rapidOverride;
-  doc["spindle_override"] = spindleOverride;
+  doc["feed_rate"] = fluidnc.feedRate;
+  doc["spindle_rpm"] = fluidnc.spindleRPM;
+  doc["feed_override"] = fluidnc.feedOverride;
+  doc["rapid_override"] = fluidnc.rapidOverride;
+  doc["spindle_override"] = fluidnc.spindleOverride;
 
   // Job status
-  doc["is_job_running"] = isJobRunning;
-  if (isJobRunning && jobStartTime > 0) {
-    doc["job_duration"] = (millis() - jobStartTime) / 1000;
+  doc["is_job_running"] = fluidnc.isJobRunning;
+  if (fluidnc.isJobRunning && fluidnc.jobStartTime > 0) {
+    doc["job_duration"] = (millis() - fluidnc.jobStartTime) / 1000;
   } else {
     doc["job_duration"] = 0;
   }
