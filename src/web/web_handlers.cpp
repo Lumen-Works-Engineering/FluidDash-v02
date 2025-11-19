@@ -1,4 +1,5 @@
 #include "web_handlers.h"
+#include "state/global_state.h"
 #include "display/display.h"
 #include "config/config.h"
 #include "sensors/sensors.h"
@@ -13,35 +14,6 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 
-// External variables from main.cpp
-extern Config cfg;
-extern WebServer server;
-extern WiFiManager wm;
-extern Preferences prefs;
-extern StorageManager storage;
-extern RTC_DS3231 rtc;
-extern float temperatures[4];
-extern float peakTemps[4];
-extern float psuVoltage;
-extern float psuMin;
-extern float psuMax;
-extern uint8_t fanSpeed;
-extern uint16_t fanRPM;
-extern bool fluidncConnected;
-extern String machineState;
-extern bool fluidncConnectionAttempted;
-extern float posX, posY, posZ, posA;
-extern float wposX, wposY, wposZ, wposA;
-extern float wcoX, wcoY, wcoZ, wcoA;
-extern int feedRate;
-extern int spindleRPM;
-extern int feedOverride;
-extern int rapidOverride;
-extern int spindleOverride;
-extern bool isJobRunning;
-extern unsigned long jobStartTime;
-extern bool inAPMode;
-extern bool webServerStarted;
 
 // Web server handler functions
 void handleRoot() {
@@ -143,13 +115,13 @@ void handleAPISave() {
   if (!fluidncWasEnabled && fluidncNowEnabled && WiFi.status() == WL_CONNECTED) {
     Serial.println("[FluidNC] Enabled via settings - connecting...");
     connectFluidNC();
-    fluidncConnectionAttempted = true;
+    fluidnc.connectionAttempted = true;
   }
   // If FluidNC was disabled, disconnect
   else if (fluidncWasEnabled && !fluidncNowEnabled) {
     Serial.println("[FluidNC] Disabled via settings - disconnecting...");
     webSocket.disconnect();
-    fluidncConnectionAttempted = false;
+    fluidnc.connectionAttempted = false;
     fluidncConnected = false;
     machineState = "OFFLINE";
   }
@@ -700,7 +672,7 @@ String getWiFiConfigHTML() {
   String currentSSID = WiFi.SSID();
   String currentIP = WiFi.localIP().toString();
   bool isConnected = (WiFi.status() == WL_CONNECTED);
-  bool isAPMode = inAPMode;
+  bool isAPMode = network.inAPMode;
 
   // Build WiFi status section
   String wifiStatus = "<div class='status ";

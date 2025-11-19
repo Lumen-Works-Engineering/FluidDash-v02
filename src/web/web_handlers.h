@@ -28,6 +28,6 @@ String getConfigJSON();
 String getStatusJSON();
 
 // Web server setup
-void setupWebServer(WebServer& server);
+void setupWebServer();
 
 #endif

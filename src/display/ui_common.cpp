@@ -1,4 +1,5 @@
 #include "ui_modes.h"
+#include "state/global_state.h"
 #include "display.h"
 #include "config/config.h"
 #include <Wire.h>

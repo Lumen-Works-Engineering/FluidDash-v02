@@ -13,7 +13,6 @@
  * - NVS-based persistent configuration storage
  */
 
-#include <Arduino.h>
 #include "config/pins.h"
 #include "config/config.h"
 #include "display/display.h"
@@ -36,113 +35,19 @@
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>
 #include "storage_manager.h"
-
-// Storage manager - handles SD/SPIFFS with fallback
-StorageManager storage;
-
-RTC_DS3231 rtc;
-WebSocketsClient webSocket;
-Preferences prefs;  // Needed for WiFi credentials storage
-WebServer server(80);
-WiFiManager wm;
-
-// Runtime variables
-DisplayMode currentMode;
-bool sdCardAvailable = false;
-volatile uint16_t tachCounter = 0;
-uint16_t fanRPM = 0;
-uint8_t fanSpeed = 0;
-float temperatures[4] = {0};
-float peakTemps[4] = {0};
-float psuVoltage = 0;
-float psuMin = 99.9;
-float psuMax = 0.0;
-
-// Non-blocking ADC sampling
-uint32_t adcSamples[5][10];  // 4 thermistors + 1 PSU, 10 samples each
-uint8_t adcSampleIndex = 0;
-uint8_t adcCurrentSensor = 0;
-unsigned long lastAdcSample = 0;
-bool adcReady = false;
-
-// Dynamic history buffer
-float *tempHistory = nullptr;
-uint16_t historySize = 0;
-uint16_t historyIndex = 0;
-
-// FluidNC status
-String machineState = "OFFLINE";
-float posX = 0, posY = 0, posZ = 0, posA = 0;
-float wposX = 0, wposY = 0, wposZ = 0, wposA = 0;
-int feedRate = 0;
-int spindleRPM = 0;
-bool fluidncConnected = false;
-unsigned long jobStartTime = 0;
-bool isJobRunning = false;
-
-// ===== ADD NEW GLOBAL VARIABLES HERE =====
-// Extended status fields
-int feedOverride = 100;
-int rapidOverride = 100;
-int spindleOverride = 100;
-float wcoX = 0, wcoY = 0, wcoZ = 0, wcoA = 0;
-
-// WebSocket reporting
-bool autoReportingEnabled = false;
-unsigned long reportingSetupTime = 0;
-
-// Debug control
-bool debugWebSocket = false;  // Set to true only when debugging
-// ===== END NEW GLOBAL VARIABLES =====
-
-// WiFi AP mode flag
-bool inAPMode = false;
-bool webServerStarted = false;
-
-// RTC availability flag
-bool rtcAvailable = false;
-
-// Timing
-unsigned long lastTachRead = 0;
-unsigned long lastDisplayUpdate = 0;
-unsigned long lastHistoryUpdate = 0;
-unsigned long lastStatusRequest = 0;
-unsigned long sessionStartTime = 0;
-unsigned long buttonPressStart = 0;
-bool buttonPressed = false;
-
-// FluidNC connection state
-bool fluidncConnectionAttempted = false;
-unsigned long bootCompleteTime = 0;
-
-// ========== Function Prototypes ==========
-void setupWebServer();
-String getMainHTML();
-String getSettingsHTML();
-String getAdminHTML();
-String getWiFiConfigHTML();
-String getConfigJSON();
-String getStatusJSON();
-// Display module functions are now in display/ui_modes.h and display/screen_renderer.h
-// Sensor functions are now in sensors/sensors.h
-// Network functions are now in network/network.h
-// Utility functions are now in utils/utils.h
+#include "state/global_state.h"
+#include "web/web_handlers.h"
 
 void IRAM_ATTR tachISR() {
-  tachCounter++;
+  sensors.tachCounter++;
 }
-
-// ========== HTML & Web Resources ==========
-// HTML pages load from filesystem (/data/web/) via StorageManager
-// Dual-storage fallback: SD card (priority) → LittleFS
-// ETag caching enabled for all HTML/JSON responses
-
-// ============ WEB SERVER FUNCTIONS ============
 
 void setup() {
   Serial.begin(115200);
   Serial.println("FluidDash - Starting...");
-
+  
+  // Initialize global state
+  initGlobalState();
   // Initialize default configuration
   initDefaultConfig();
 
@@ -173,10 +78,10 @@ void setup() {
   // Check if RTC is present
   if (!rtc.begin()) {
     Serial.println("RTC not found - time display will show 'No RTC'");
-    rtcAvailable = false;
+    network.rtcAvailable = false;
   } else {
     Serial.println("RTC initialized");
-    rtcAvailable = true;
+    network.rtcAvailable = true;
   }
 
   pinMode(BTN_MODE, INPUT_PULLUP);
@@ -226,7 +131,7 @@ void setup() {
 
     WiFi.mode(WIFI_AP);
     WiFi.softAP("FluidDash-Setup");
-    inAPMode = true;
+    network.inAPMode = true;
 
     Serial.print("AP Mode - IP: ");
     Serial.println(WiFi.softAPIP());
@@ -234,7 +139,7 @@ void setup() {
 
     // Start web server for configuration
     setupWebServer();
-    webServerStarted = true;
+    network.webServerStarted = true;
     yield();
   } else {
     // Try to connect to saved WiFi
@@ -273,14 +178,14 @@ void setup() {
 
       // Start web server
       setupWebServer();
-      webServerStarted = true;
+      network.webServerStarted = true;
       yield();
 
       // FluidNC connection (if enabled in settings)
       if (cfg.fluidnc_auto_discover) {
         Serial.println("[FluidNC] Auto-discover enabled - connecting...");
         connectFluidNC();
-        fluidncConnectionAttempted = true;
+        fluidnc.connectionAttempted = true;
       }
     } else {
       // WiFi connection failed - continue in standalone mode
@@ -294,7 +199,7 @@ void setup() {
 
   yield();
 
-  sessionStartTime = millis();
+  timing.sessionStartTime = millis();
   currentMode = cfg.default_mode;
 
   yield();
@@ -305,7 +210,7 @@ void setup() {
   yield();
 
   // Mark boot complete time for deferred FluidNC connection
-  bootCompleteTime = millis();
+  timing.bootCompleteTime = millis();
   Serial.println("Setup complete - entering main loop");
   yield();
 }
@@ -323,54 +228,54 @@ void loop() {
   sampleSensorsNonBlocking();
 
   // Process complete ADC readings when ready
-  if (adcReady) {
+  if (sensors.adcReady) {
     processAdcReadings();
     controlFan();
-    adcReady = false;
+    sensors.adcReady = false;
   }
 
-  if (millis() - lastTachRead >= 1000) {
+  if (millis() - timing.lastTachRead >= 1000) {
     calculateRPM();
-    lastTachRead = millis();
+    timing.lastTachRead = millis();
   }
 
-  if (millis() - lastHistoryUpdate >= (cfg.graph_update_interval * 1000)) {
+  if (millis() - timing.lastHistoryUpdate >= (cfg.graph_update_interval * 1000)) {
     updateTempHistory();
-    lastHistoryUpdate = millis();
+    timing.lastHistoryUpdate = millis();
   }
 
   // WebSocket handling (only if connection was attempted)
-  if (WiFi.status() == WL_CONNECTED && fluidncConnectionAttempted) {
+  if (WiFi.status() == WL_CONNECTED && fluidnc.connectionAttempted) {
       yield();  // Yield before WebSocket operations
       webSocket.loop();
       yield();  // Yield after WebSocket operations
 
       // Always poll for status - FluidNC doesn't have automatic reporting
-      if (fluidncConnected && (millis() - lastStatusRequest >= cfg.status_update_rate)) {
-          if (debugWebSocket) {
+      if (fluidnc.connected && (millis() - timing.lastStatusRequest >= cfg.status_update_rate)) {
+          if (fluidnc.debugWebSocket) {
               Serial.println("[FluidNC] Sending status request");
           }
           yield();  // Yield before send
           webSocket.sendTXT("?");
           yield();  // Yield after send
-          lastStatusRequest = millis();
+          timing.lastStatusRequest = millis();
       }
 
       // Periodic debug output (only every 10 seconds now)
       static unsigned long lastDebug = 0;
-      if (debugWebSocket && millis() - lastDebug >= 10000) {
+      if (fluidnc.debugWebSocket && millis() - lastDebug >= 10000) {
           Serial.printf("[DEBUG] State:%s MPos:(%.2f,%.2f,%.2f,%.2f) WPos:(%.2f,%.2f,%.2f,%.2f)\n",
-                        machineState.c_str(),
-                        posX, posY, posZ, posA,
-                        wposX, wposY, wposZ, wposA);
+                        fluidnc.machineState.c_str(),
+                        fluidnc.posX, fluidnc.posY, fluidnc.posZ, fluidnc.posA,
+                        fluidnc.wposX, fluidnc.wposY, fluidnc.wposZ, fluidnc.wposA);
           lastDebug = millis();
       }
   }
 
 
-  if (millis() - lastDisplayUpdate >= 1000) {
+  if (millis() - timing.lastDisplayUpdate >= 1000) {
     updateDisplay();
-    lastDisplayUpdate = millis();
+    timing.lastDisplayUpdate = millis();
   }
 
   // Short yield instead of delay for better responsiveness
