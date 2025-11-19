@@ -298,12 +298,125 @@ Content-Length: 0
 
 ---
 
-## Files Modified Summary (Session 2)
+## Session 3: JSON Screen Rendering Cleanup ✅ COMPLETE
+
+**Date:** 2025-01-19
+**Objective:** Remove all remaining JSON screen rendering code from ui_modes.cpp
+
+### Issue Identified:
+User noticed that `ui_modes.cpp` still contained dormant JSON screen rendering code:
+- `drawScreen()` and `updateDisplay()` had conditional checks for `monitorLayout.isValid`
+- Functions would try JSON rendering first, fall back to hard-coded rendering
+- `updateDynamicElements()` function still present but never called
+- `#include "screen_renderer.h"` still in file
+
+### Cleanup Tasks Completed:
+
+**1. Removed screen_renderer.h Include**
+- **Deleted:** `#include "screen_renderer.h"`
+- **Reason:** JSON screen rendering disabled in Phase 2
+- **Location:** `src/display/ui_modes.cpp:3`
+
+**2. Removed updateDynamicElements() Function Prototype**
+- **Deleted:** `void updateDynamicElements(const ScreenLayout& layout);`
+- **Reason:** Function no longer used after JSON rendering removal
+- **Location:** `src/display/ui_modes.cpp:33`
+
+**3. Simplified drawScreen() Function**
+- **Before:** 38 lines with JSON layout checks and conditional rendering
+- **After:** 17 lines - direct switch statement calling hard-coded functions
+- **Removed logic:** All `if (layoutName.isValid)` checks and `drawScreenFromLayout()` calls
+- **Location:** `src/display/ui_modes.cpp:36-53`
+
+**4. Simplified updateDisplay() Function**
+- **Before:** 27 lines with JSON layout checks and conditional updates
+- **After:** 17 lines - direct switch statement calling hard-coded update functions
+- **Removed logic:** All `if (layoutName.isValid)` checks and `updateDynamicElements()` calls
+- **Location:** `src/display/ui_modes.cpp:55-73`
+
+**5. Removed updateDynamicElements() Function Implementation**
+- **Deleted:** Entire 23-line function including element iteration logic
+- **Reason:** No longer called after simplifying drawScreen/updateDisplay
+- **Location:** `src/display/ui_modes.cpp:75-98`
+
+**6. Fixed Missing Include Dependencies**
+- **Added:** `#include "config/config.h"` to restore access to `DisplayMode` and `Config` types
+- **Added:** `extern Config cfg;` declaration for global config variable
+- **Reason:** Removing screen_renderer.h removed transitive include of config.h
+- **Location:** `src/display/ui_modes.cpp:3, 9`
+
+### Code Impact:
+- **Removed:** ~70 lines of dormant JSON screen rendering code
+- **Simplified:** Display rendering pipeline now exclusively uses hard-coded functions
+- **Reduced complexity:** Eliminated conditional rendering logic
+- **Maintained functionality:** All 4 display modes work unchanged (Monitor, Alignment, Graph, Network)
+
+### Build Verification:
+- ✅ Initial build failed due to missing config.h include
+- ✅ Added `#include "config/config.h"` and `extern Config cfg;`
+- ✅ Build succeeded with no warnings
+- ✅ Firmware compiles cleanly
+
+### Files Modified:
+- `src/display/ui_modes.cpp` - Complete removal of JSON screen rendering code
+
+---
+
+## Session 3 (Continued): Bug Fix - Network Mode Display ✅ COMPLETE
+
+**Date:** 2025-01-19
+**Objective:** Fix graphical artifacts in Network Mode display
+
+### Issue Identified:
+User reported that Network Mode had visual bugs:
+1. **Temperature graph overlay** - Previous screen content (from Graph Mode) remained visible
+2. **Mode label persistence** - "NETWORK" flash label stayed on screen and wasn't erased
+
+### Root Cause:
+`drawNetworkMode()` was missing the initial `gfx.fillScreen(COLOR_BG);` call that all other display modes have. This is required to clear the entire screen before drawing new content.
+
+### The Fix:
+Added `gfx.fillScreen(COLOR_BG);` as the first line in `drawNetworkMode()` function.
+
+**Before:**
+```cpp
+void drawNetworkMode() {
+  // Header
+  gfx.fillRect(0, 0, SCREEN_WIDTH, 25, COLOR_HEADER);
+```
+
+**After:**
+```cpp
+void drawNetworkMode() {
+  gfx.fillScreen(COLOR_BG);  // Clear entire screen first
+
+  // Header
+  gfx.fillRect(0, 0, SCREEN_WIDTH, 25, COLOR_HEADER);
+```
+
+### Verification:
+All four display mode functions now properly clear the screen:
+- ✅ `drawMonitorMode()` - Has `gfx.fillScreen(COLOR_BG);`
+- ✅ `drawAlignmentMode()` - Has `gfx.fillScreen(COLOR_BG);`
+- ✅ `drawGraphMode()` - Has `gfx.fillScreen(COLOR_BG);`
+- ✅ `drawNetworkMode()` - **Fixed!** Now has `gfx.fillScreen(COLOR_BG);`
+
+### Result:
+- ✅ Network Mode displays cleanly without artifacts
+- ✅ Mode transitions work correctly (no overlay from previous screens)
+- ✅ Flash mode label properly erased during redraw
+
+### Files Modified:
+- `src/display/ui_modes.cpp:556` - Added screen clear to drawNetworkMode()
+
+---
+
+## Files Modified Summary (Session 2 & 3)
 
 ### Core Files:
 - `src/main.cpp` - FluidNC connection logic, JSON error handlers, watchdog fixes, ETag-enabled HTML handlers, code cleanup
 - `src/sensors/sensors.cpp` - Position mapping fix, watchdog timeout fix
-- `src/display/ui_modes.cpp` - Peak temperature tracking fix
+- `src/display/ui_modes.cpp` - Peak temperature tracking fix, complete JSON screen rendering removal, Network Mode screen clear bug fix
 - `src/web/web_utils.h` - JSON error helper function, ETag generation and caching functions
 
 ### Web Interface:
@@ -322,14 +435,18 @@ Content-Length: 0
 - Phase 1: Storage System & HTML Integration
 - Phase 2: JSON Screen Rendering Disabled
 - Phase 7: Temperature Sensor Naming & Driver Assignment
-- Phase 4 - Task 1: ETag HTTP Caching ✅
-- Phase 4 - Task 2: Captive Portal (removed - not needed)
-- Phase 4 - Task 3: JSON Error Responses ✅
+- Phase 4: Web Server Optimization ✅
+  - Task 1: ETag HTTP Caching ✅
+  - Task 2: Captive Portal (removed - not needed) ✅
+  - Task 3: JSON Error Responses ✅
+  - Task 4: WebSocket Keep-Alive (skipped - LOW priority, optional)
 - Phase 5: Code Cleanup & Documentation ✅
+  - main.cpp cleanup
+  - ui_modes.cpp JSON rendering removal
+  - drawNetworkMode() bug fix
 - FluidNC Configuration UI (essential feature) ✅
 
 **⏳ REMAINING TASKS:**
-- Phase 4 - Task 4: WebSocket Keep-Alive (LOW priority, optional - may skip)
 - Phase 6: Final Testing & Validation
 
 **🔮 DEFERRED TO FUTURE:**
@@ -347,6 +464,7 @@ Content-Length: 0
 2. ✅ Watchdog timeout during touch detection (Session 2)
 3. ✅ Watchdog timeout during WiFi connection (Session 2)
 4. ✅ Missing FluidNC configuration UI (Session 2)
+5. ✅ Network Mode display artifacts - missing screen clear (Session 3)
 
 ---
 

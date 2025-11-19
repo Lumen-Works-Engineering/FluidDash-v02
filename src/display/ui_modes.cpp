@@ -151,14 +151,14 @@ void drawMonitorMode() {
 
     // Peak temp to the right
     if (peakTemp > 0.0) {
-      gfx.setTextSize(2);
+      gfx.setTextSize(1);
       gfx.setTextColor(COLOR_LINE);
       gfx.setCursor(140, 52 + pos * 30);
       sprintf(buffer, "pk:%d%s", (int)peakTemp, cfg.use_fahrenheit ? "F" : "C");
       gfx.print(buffer);
     }
 
-    gfx.setTextSize(2);
+    gfx.setTextSize(1);
   }
 
   // Status section
@@ -553,6 +553,8 @@ void updateGraphMode() {
 // ========== NETWORK MODE ==========
 
 void drawNetworkMode() {
+  gfx.fillScreen(COLOR_BG);
+
   // Header
   gfx.fillRect(0, 0, SCREEN_WIDTH, 25, COLOR_HEADER);
   gfx.setTextColor(COLOR_TEXT);
