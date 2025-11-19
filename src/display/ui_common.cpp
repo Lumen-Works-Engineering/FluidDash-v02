@@ -9,13 +9,6 @@
 // External variables from main.cpp
 extern Config cfg;
 extern DisplayMode currentMode;
-extern float *tempHistory;
-extern uint16_t historySize;
-extern uint16_t historyIndex;
-extern unsigned long buttonPressStart;
-extern bool buttonPressed;
-extern bool inAPMode;
-extern bool webServerStarted;
 
 // Function prototypes from main.cpp
 void setupWebServer();
@@ -32,16 +25,16 @@ void drawTempGraph(int x, int y, int w, int h) {
   float maxTemp = 60.0;
 
   // Draw temperature line
-  for (int i = 1; i < historySize; i++) {
-    int idx1 = (historyIndex + i - 1) % historySize;
-    int idx2 = (historyIndex + i) % historySize;
+  for (int i = 1; i < history.historySize; i++) {
+    int idx1 = (history.historyIndex + i - 1) % history.historySize;
+    int idx2 = (history.historyIndex + i) % history.historySize;
 
-    float temp1 = tempHistory[idx1];
-    float temp2 = tempHistory[idx2];
+    float temp1 = history.tempHistory[idx1];
+    float temp2 = history.tempHistory[idx2];
 
-    int x1 = x + ((i - 1) * w / historySize);
+    int x1 = x + ((i - 1) * w / history.historySize);
     int y1 = y + h - ((temp1 - minTemp) / (maxTemp - minTemp) * h);
-    int x2 = x + (i * w / historySize);
+    int x2 = x + (i * w / history.historySize);
     int y2 = y + h - ((temp2 - minTemp) / (maxTemp - minTemp) * h);
 
     y1 = constrain(y1, y, y + h);
@@ -72,13 +65,13 @@ void drawTempGraph(int x, int y, int w, int h) {
 void handleButton() {
   bool currentState = (digitalRead(BTN_MODE) == LOW);
 
-  if (currentState && !buttonPressed) {
-    buttonPressed = true;
-    buttonPressStart = millis();
+  if (currentState && !timing.buttonPressed) {
+    timing.buttonPressed = true;
+    timing.buttonPressStart = millis();
   }
-  else if (!currentState && buttonPressed) {
-    unsigned long pressDuration = millis() - buttonPressStart;
-    buttonPressed = false;
+  else if (!currentState && timing.buttonPressed) {
+    unsigned long pressDuration = millis() - timing.buttonPressStart;
+    timing.buttonPressed = false;
 
     if (pressDuration >= 5000) {
       enterSetupMode();
@@ -86,7 +79,7 @@ void handleButton() {
       cycleDisplayMode();
     }
   }
-  else if (buttonPressed && (millis() - buttonPressStart >= 2000)) {
+  else if (timing.buttonPressed && (millis() - timing.buttonPressStart >= 2000)) {
     showHoldProgress();
   }
 }
@@ -113,7 +106,7 @@ void cycleDisplayMode() {
 }
 
 void showHoldProgress() {
-  unsigned long elapsed = millis() - buttonPressStart;
+  unsigned long elapsed = millis() - timing.buttonPressStart;
   int progress = map(elapsed, 2000, 5000, 0, 100);
   progress = constrain(progress, 0, 100);
 
@@ -142,16 +135,16 @@ void enterSetupMode() {
   // Start in AP mode
   WiFi.mode(WIFI_AP);
   WiFi.softAP("FluidDash-Setup");
-  inAPMode = true;
+  network.inAPMode = true;
 
   Serial.print("AP started. IP: ");
   Serial.println(WiFi.softAPIP());
 
   // Start web server if not already running
-  if (!webServerStarted) {
+  if (!network.webServerStarted) {
     Serial.println("Starting web server for AP mode...");
     setupWebServer();
-    webServerStarted = true;
+    network.webServerStarted = true;
   }
 
   // Show AP mode screen

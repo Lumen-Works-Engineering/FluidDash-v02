@@ -9,19 +9,7 @@
 // External variables from main.cpp
 extern Config cfg;
 extern DisplayMode currentMode;
-extern float temperatures[4];
-extern float peakTemps[4];
-extern float psuVoltage;
-extern uint8_t fanSpeed;
-extern uint16_t fanRPM;
-extern bool fluidncConnected;
-extern String machineState;
-extern float posX, posY, posZ, posA;
-extern float wposX, wposY, wposZ, wposA;
-extern bool rtcAvailable;
 extern RTC_DS3231 rtc;
-extern float *tempHistory;
-extern uint16_t historySize;
 
 // Function prototype from main.cpp
 const char* getMonthName(int month);
@@ -40,7 +28,7 @@ void drawMonitorMode() {
 
   // DateTime in header (right side)
   char buffer[40];
-  if (rtcAvailable) {
+  if (network.rtcAvailable) {
     DateTime now = rtc.now();
     sprintf(buffer, "%s %02d  %02d:%02d:%02d",
             getMonthName(now.month()), now.day(), now.hour(), now.minute(), now.second());
@@ -80,7 +68,7 @@ void drawMonitorMode() {
       if (isnan(currentTemp)) currentTemp = 0.0;
 
       // Get peak temp for this position
-      peakTemp = peakTemps[pos];
+      peakTemp = sensors.peakTemps[pos];
 
       // Show friendly name (truncated to 12 chars)
       char truncatedName[13];
@@ -90,8 +78,8 @@ void drawMonitorMode() {
     } else {
       // No sensor assigned - show default label and use fallback temps array
       gfx.print(defaultLabels[pos]);
-      currentTemp = temperatures[pos];
-      peakTemp = peakTemps[pos];
+      currentTemp = sensors.temperatures[pos];
+      peakTemp = sensors.peakTemps[pos];
     }
 
     // Current temp
@@ -120,19 +108,19 @@ void drawMonitorMode() {
 
   gfx.setCursor(10, 200);
   gfx.setTextColor(COLOR_LINE);
-  sprintf(buffer, "Fan: %d%% (%dRPM)", fanSpeed, fanRPM);
+  sprintf(buffer, "Fan: %d%% (%dRPM)", sensors.fanSpeed, sensors.fanRPM);
   gfx.print(buffer);
 
   gfx.setCursor(10, 215);
-  sprintf(buffer, "PSU: %.1fV", psuVoltage);
+  sprintf(buffer, "PSU: %.1fV", sensors.psuVoltage);
   gfx.print(buffer);
 
   gfx.setCursor(10, 230);
-  if (fluidncConnected) {
-    if (machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
-    else if (machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
+  if (fluidnc.connected) {
+    if (fluidnc.machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
+    else if (fluidnc.machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
     else gfx.setTextColor(COLOR_VALUE);
-    sprintf(buffer, "FluidNC: %s", machineState.c_str());
+    sprintf(buffer, "FluidNC: %s", fluidnc.machineState.c_str());
   } else {
     gfx.setTextColor(COLOR_WARN);
     sprintf(buffer, "FluidNC: Disconnected");
@@ -143,17 +131,17 @@ void drawMonitorMode() {
   gfx.setTextColor(COLOR_TEXT);
   gfx.setCursor(10, 250);
   if (cfg.coord_decimal_places == 3) {
-    sprintf(buffer, "WCS: X:%.3f Y:%.3f Z:%.3f", wposX, wposY, wposZ);
+    sprintf(buffer, "WCS: X:%.3f Y:%.3f Z:%.3f", fluidnc.wposX, fluidnc.wposY, fluidnc.wposZ);
   } else {
-    sprintf(buffer, "WCS: X:%.2f Y:%.2f Z:%.2f", wposX, wposY, wposZ);
+    sprintf(buffer, "WCS: X:%.2f Y:%.2f Z:%.2f", fluidnc.wposX, fluidnc.wposY, fluidnc.wposZ);
   }
   gfx.print(buffer);
 
   gfx.setCursor(10, 265);
   if (cfg.coord_decimal_places == 3) {
-    sprintf(buffer, "MCS: X:%.3f Y:%.3f Z:%.3f", posX, posY, posZ);
+    sprintf(buffer, "MCS: X:%.3f Y:%.3f Z:%.3f", fluidnc.posX, fluidnc.posY, fluidnc.posZ);
   } else {
-    sprintf(buffer, "MCS: X:%.2f Y:%.2f Z:%.2f", posX, posY, posZ);
+    sprintf(buffer, "MCS: X:%.2f Y:%.2f Z:%.2f", fluidnc.posX, fluidnc.posY, fluidnc.posZ);
   }
   gfx.print(buffer);
 
@@ -183,7 +171,7 @@ void updateMonitorMode() {
   char buffer[80];
 
   // Update DateTime in header
-  if (rtcAvailable) {
+  if (network.rtcAvailable) {
     DateTime now = rtc.now();
     sprintf(buffer, "%s %02d  %02d:%02d:%02d",
             getMonthName(now.month()), now.day(), now.hour(), now.minute(), now.second());
@@ -203,16 +191,16 @@ void updateMonitorMode() {
 
     // Current temp
     gfx.setTextSize(2);
-    gfx.setTextColor(temperatures[i] > cfg.temp_threshold_high ? COLOR_WARN : COLOR_VALUE);
+    gfx.setTextColor(sensors.temperatures[i] > cfg.temp_threshold_high ? COLOR_WARN : COLOR_VALUE);
     gfx.setCursor(50, 47 + i * 30);
-    sprintf(buffer, "%d%s", (int)temperatures[i], cfg.use_fahrenheit ? "F" : "C");
+    sprintf(buffer, "%d%s", (int)sensors.temperatures[i], cfg.use_fahrenheit ? "F" : "C");
     gfx.print(buffer);
 
     // Peak temp
     gfx.setTextSize(1);
     gfx.setTextColor(COLOR_LINE);
     gfx.setCursor(140, 52 + i * 30);
-    sprintf(buffer, "pk:%d%s", (int)peakTemps[i], cfg.use_fahrenheit ? "F" : "C");
+    sprintf(buffer, "pk:%d%s", (int)sensors.peakTemps[i], cfg.use_fahrenheit ? "F" : "C");
     gfx.print(buffer);
   }
 
@@ -223,24 +211,24 @@ void updateMonitorMode() {
   gfx.fillRect(10, 200, 220, 10, COLOR_BG);
   gfx.setTextColor(COLOR_LINE);
   gfx.setCursor(10, 200);
-  sprintf(buffer, "Fan: %d%% (%dRPM)", fanSpeed, fanRPM);
+  sprintf(buffer, "Fan: %d%% (%dRPM)", sensors.fanSpeed, sensors.fanRPM);
   gfx.print(buffer);
 
   // PSU
   gfx.fillRect(10, 215, 220, 10, COLOR_BG);
   gfx.setCursor(10, 215);
   gfx.setTextColor(COLOR_LINE);
-  sprintf(buffer, "PSU: %.1fV", psuVoltage);
+  sprintf(buffer, "PSU: %.1fV", sensors.psuVoltage);
   gfx.print(buffer);
 
   // FluidNC Status
   gfx.fillRect(10, 230, 220, 10, COLOR_BG);
   gfx.setCursor(10, 230);
-  if (fluidncConnected) {
-    if (machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
-    else if (machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
+  if (fluidnc.connected) {
+    if (fluidnc.machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
+    else if (fluidnc.machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
     else gfx.setTextColor(COLOR_VALUE);
-    sprintf(buffer, "FluidNC: %s", machineState.c_str());
+    sprintf(buffer, "FluidNC: %s", fluidnc.machineState.c_str());
   } else {
     gfx.setTextColor(COLOR_WARN);
     sprintf(buffer, "FluidNC: Disconnected");
@@ -252,9 +240,9 @@ void updateMonitorMode() {
   gfx.setTextColor(COLOR_TEXT);
   gfx.setCursor(10, 250);
   if (cfg.coord_decimal_places == 3) {
-    sprintf(buffer, "WCS: X:%.3f Y:%.3f Z:%.3f", wposX, wposY, wposZ);
+    sprintf(buffer, "WCS: X:%.3f Y:%.3f Z:%.3f", fluidnc.wposX, fluidnc.wposY, fluidnc.wposZ);
   } else {
-    sprintf(buffer, "WCS: X:%.2f Y:%.2f Z:%.2f", wposX, wposY, wposZ);
+    sprintf(buffer, "WCS: X:%.2f Y:%.2f Z:%.2f", fluidnc.wposX, fluidnc.wposY, fluidnc.wposZ);
   }
   gfx.print(buffer);
 
@@ -262,9 +250,9 @@ void updateMonitorMode() {
   gfx.fillRect(10, 265, 220, 10, COLOR_BG);
   gfx.setCursor(10, 265);
   if (cfg.coord_decimal_places == 3) {
-    sprintf(buffer, "MCS: X:%.3f Y:%.3f Z:%.3f", posX, posY, posZ);
+    sprintf(buffer, "MCS: X:%.3f Y:%.3f Z:%.3f", fluidnc.posX, fluidnc.posY, fluidnc.posZ);
   } else {
-    sprintf(buffer, "MCS: X:%.2f Y:%.2f Z:%.2f", posX, posY, posZ);
+    sprintf(buffer, "MCS: X:%.2f Y:%.2f Z:%.2f", fluidnc.posX, fluidnc.posY, fluidnc.posZ);
   }
   gfx.print(buffer);
 

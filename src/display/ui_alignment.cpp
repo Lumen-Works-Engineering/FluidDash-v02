@@ -6,12 +6,6 @@
 
 // External variables from main.cpp
 extern Config cfg;
-extern float temperatures[4];
-extern float psuVoltage;
-extern uint8_t fanSpeed;
-extern String machineState;
-extern float posX, posY, posZ, posA;
-extern float wposX, wposY, wposZ, wposA;
 
 // ========== ALIGNMENT MODE ==========
 
@@ -34,7 +28,7 @@ void drawAlignmentMode() {
   gfx.print("WORK POSITION");
 
   // Detect if 4-axis machine (if A-axis is non-zero or moving)
-  bool has4Axes = (posA != 0 || wposA != 0);
+  bool has4Axes = (fluidnc.posA != 0 || fluidnc.wposA != 0);
 
   if (has4Axes) {
     // 4-AXIS DISPLAY - Slightly smaller to fit all axes
@@ -49,25 +43,25 @@ void drawAlignmentMode() {
     }
 
     gfx.setCursor(40, 75);
-    gfx.printf(coordFormat, wposX);
+    gfx.printf(coordFormat, fluidnc.wposX);
 
     coordFormat[0] = 'Y';
     gfx.setCursor(40, 120);
-    gfx.printf(coordFormat, wposY);
+    gfx.printf(coordFormat, fluidnc.wposY);
 
     coordFormat[0] = 'Z';
     gfx.setCursor(40, 165);
-    gfx.printf(coordFormat, wposZ);
+    gfx.printf(coordFormat, fluidnc.wposZ);
 
     coordFormat[0] = 'A';
     gfx.setCursor(40, 210);
-    gfx.printf(coordFormat, wposA);
+    gfx.printf(coordFormat, fluidnc.wposA);
 
     // Small info footer for 4-axis
     gfx.setTextSize(1);
     gfx.setTextColor(COLOR_LINE);
     gfx.setCursor(10, 265);
-    gfx.printf("Machine: X:%.1f Y:%.1f Z:%.1f A:%.1f", posX, posY, posZ, posA);
+    gfx.printf("Machine: X:%.1f Y:%.1f Z:%.1f A:%.1f", fluidnc.posX, fluidnc.posY, fluidnc.posZ, fluidnc.posA);
   } else {
     // 3-AXIS DISPLAY - Original large size
     gfx.setTextSize(5);
@@ -81,43 +75,43 @@ void drawAlignmentMode() {
     }
 
     gfx.setCursor(40, 90);
-    gfx.printf(coordFormat, wposX);
+    gfx.printf(coordFormat, fluidnc.wposX);
 
     coordFormat[0] = 'Y';
     gfx.setCursor(40, 145);
-    gfx.printf(coordFormat, wposY);
+    gfx.printf(coordFormat, fluidnc.wposY);
 
     coordFormat[0] = 'Z';
     gfx.setCursor(40, 200);
-    gfx.printf(coordFormat, wposZ);
+    gfx.printf(coordFormat, fluidnc.wposZ);
 
     // Small info footer for 3-axis
     gfx.setTextSize(1);
     gfx.setTextColor(COLOR_LINE);
     gfx.setCursor(10, 270);
-    gfx.printf("Machine: X:%.1f Y:%.1f Z:%.1f", posX, posY, posZ);
+    gfx.printf("Machine: X:%.1f Y:%.1f Z:%.1f", fluidnc.posX, fluidnc.posY, fluidnc.posZ);
   }
 
   // Status line (same for both)
   gfx.setCursor(10, 285);
-  if (machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
-  else if (machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
+  if (fluidnc.machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
+  else if (fluidnc.machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
   else gfx.setTextColor(COLOR_VALUE);
-  gfx.printf("Status: %s", machineState.c_str());
+  gfx.printf("Status: %s", fluidnc.machineState.c_str());
 
-  float maxTemp = temperatures[0];
+  float maxTemp = sensors.temperatures[0];
   for (int i = 1; i < 4; i++) {
-    if (temperatures[i] > maxTemp) maxTemp = temperatures[i];
+    if (sensors.temperatures[i] > maxTemp) maxTemp = sensors.temperatures[i];
   }
 
   gfx.setTextColor(maxTemp > cfg.temp_threshold_high ? COLOR_WARN : COLOR_LINE);
   gfx.setCursor(10, 300);
-  gfx.printf("Temps:%.0fC  Fan:%d%%  PSU:%.1fV", maxTemp, fanSpeed, psuVoltage);
+  gfx.printf("Temps:%.0fC  Fan:%d%%  PSU:%.1fV", maxTemp, sensors.fanSpeed, sensors.psuVoltage);
 }
 
 void updateAlignmentMode() {
   // Detect if 4-axis machine
-  bool has4Axes = (posA != 0 || wposA != 0);
+  bool has4Axes = (fluidnc.posA != 0 || fluidnc.wposA != 0);
 
   if (has4Axes) {
     // 4-AXIS UPDATE
@@ -134,22 +128,22 @@ void updateAlignmentMode() {
     // Update X
     gfx.fillRect(140, 75, 330, 32, COLOR_BG);
     gfx.setCursor(140, 75);
-    gfx.printf(coordFormat, wposX);
+    gfx.printf(coordFormat, fluidnc.wposX);
 
     // Update Y
     gfx.fillRect(140, 120, 330, 32, COLOR_BG);
     gfx.setCursor(140, 120);
-    gfx.printf(coordFormat, wposY);
+    gfx.printf(coordFormat, fluidnc.wposY);
 
     // Update Z
     gfx.fillRect(140, 165, 330, 32, COLOR_BG);
     gfx.setCursor(140, 165);
-    gfx.printf(coordFormat, wposZ);
+    gfx.printf(coordFormat, fluidnc.wposZ);
 
     // Update A
     gfx.fillRect(140, 210, 330, 32, COLOR_BG);
     gfx.setCursor(140, 210);
-    gfx.printf(coordFormat, wposA);
+    gfx.printf(coordFormat, fluidnc.wposA);
 
     // Update footer
     gfx.setTextSize(1);
@@ -157,7 +151,7 @@ void updateAlignmentMode() {
 
     gfx.setTextColor(COLOR_LINE);
     gfx.setCursor(90, 265);
-    gfx.printf("X:%.1f Y:%.1f Z:%.1f A:%.1f", posX, posY, posZ, posA);
+    gfx.printf("X:%.1f Y:%.1f Z:%.1f A:%.1f", fluidnc.posX, fluidnc.posY, fluidnc.posZ, fluidnc.posA);
   } else {
     // 3-AXIS UPDATE - Original code
     gfx.setTextSize(5);
@@ -172,15 +166,15 @@ void updateAlignmentMode() {
 
     gfx.fillRect(150, 90, 320, 38, COLOR_BG);
     gfx.setCursor(150, 90);
-    gfx.printf(coordFormat, wposX);
+    gfx.printf(coordFormat, fluidnc.wposX);
 
     gfx.fillRect(150, 145, 320, 38, COLOR_BG);
     gfx.setCursor(150, 145);
-    gfx.printf(coordFormat, wposY);
+    gfx.printf(coordFormat, fluidnc.wposY);
 
     gfx.fillRect(150, 200, 320, 38, COLOR_BG);
     gfx.setCursor(150, 200);
-    gfx.printf(coordFormat, wposZ);
+    gfx.printf(coordFormat, fluidnc.wposZ);
 
     // Update footer
     gfx.setTextSize(1);
@@ -188,22 +182,22 @@ void updateAlignmentMode() {
 
     gfx.setTextColor(COLOR_LINE);
     gfx.setCursor(90, 270);
-    gfx.printf("X:%.1f Y:%.1f Z:%.1f", posX, posY, posZ);
+    gfx.printf("X:%.1f Y:%.1f Z:%.1f", fluidnc.posX, fluidnc.posY, fluidnc.posZ);
   }
 
   // Update status (same for both)
   gfx.setCursor(80, 285);
-  if (machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
-  else if (machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
+  if (fluidnc.machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
+  else if (fluidnc.machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
   else gfx.setTextColor(COLOR_VALUE);
-  gfx.printf("%s", machineState.c_str());
+  gfx.printf("%s", fluidnc.machineState.c_str());
 
-  float maxTemp = temperatures[0];
+  float maxTemp = sensors.temperatures[0];
   for (int i = 1; i < 4; i++) {
-    if (temperatures[i] > maxTemp) maxTemp = temperatures[i];
+    if (sensors.temperatures[i] > maxTemp) maxTemp = sensors.temperatures[i];
   }
 
   gfx.setTextColor(maxTemp > cfg.temp_threshold_high ? COLOR_WARN : COLOR_LINE);
   gfx.setCursor(90, 300);
-  gfx.printf("%.0fC  Fan:%d%%  PSU:%.1fV", maxTemp, fanSpeed, psuVoltage);
+  gfx.printf("%.0fC  Fan:%d%%  PSU:%.1fV", maxTemp, sensors.fanSpeed, sensors.psuVoltage);
 }
