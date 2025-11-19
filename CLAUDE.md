@@ -275,7 +275,6 @@ FluidDash-v02/
 ├── platformio.ini                 # PlatformIO build configuration
 ├── CLAUDE.md                      # This file - AI assistant guide
 ├── SENSOR_MANAGEMENT_IMPLEMENTATION.md  # Sensor system implementation plan
-├── html_to_spiffs.md              # Guide for embedding HTML in SPIFFS
 │
 ├── data/                          # Filesystem data (uploaded to SPIFFS/SD)
 │   ├── web/                       # Web interface HTML files
@@ -283,12 +282,6 @@ FluidDash-v02/
 │   │   ├── settings.html          # User configuration
 │   │   ├── admin.html             # Calibration interface
 │   │   └── wifi_config.html       # WiFi setup page
-│   ├── screens/                   # JSON screen layout definitions
-│   │   ├── screen_0.json          # Monitor mode layout
-│   │   ├── monitor.json           # Alternative monitor layout
-│   │   ├── alignment.json         # Alignment/calibration screen
-│   │   ├── graph.json             # Temperature graphing screen
-│   │   └── network.json           # Network status screen
 │   └── defaults/                  # Default layout backups
 │       └── layout_*.json
 │
@@ -353,10 +346,9 @@ FluidDash-v02/
 ### Git Branch Strategy
 
 **Main Branch:** `main` (stable releases)
-**Development Branches:** `claude/*` (AI-assisted development)
 **Feature Branches:** `feature/*` (manual development)
 
-**Current Working Branch:** `claude/claude-md-mhzdss8idgpqrjlf-01DLKhNtvYbXckbVfLBRStQ5`
+**Current Working Branch:** `main`
 
 ### Commit Message Conventions
 
@@ -738,7 +730,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 }
 ```
 
-#### 4. JSON-Based Configuration
+#### 4. JSON-Based Configuration (Removed)
 
 Screen layouts, settings, and sensor configurations are all JSON-driven:
 
@@ -982,7 +974,7 @@ void drawScreenFromLayout(ScreenLayout& layout);  // Render from JSON
 void updateDynamicElements(ScreenLayout& layout); // Update values only
 ```
 
-**JSON Layout System:**
+**JSON Layout System (REMOVED):**
 
 Layouts are defined in `/data/screens/*.json`:
 

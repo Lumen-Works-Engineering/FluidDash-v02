@@ -1,11 +1,12 @@
 #include "ui_modes.h"
 #include "display.h"
-#include "screen_renderer.h"
+#include "config/config.h"
 #include "sensors/sensors.h"
 #include <WiFi.h>
 #include <RTClib.h>
 
 // External variables from main.cpp
+extern Config cfg;
 extern DisplayMode currentMode;
 extern float temperatures[4];
 extern float peakTemps[4];
@@ -30,100 +31,46 @@ extern bool buttonPressed;
 void setupWebServer();
 void enterSetupMode();
 const char* getMonthName(int month);
-void updateDynamicElements(const ScreenLayout& layout);
 
 // ========== MAIN DISPLAY CONTROL ==========
 
 void drawScreen() {
     switch(currentMode) {
         case MODE_MONITOR:
-            // Try JSON layout first, fallback to legacy if not available
-            if (monitorLayout.isValid) {
-                Serial.println("[JSON] Drawing monitor from JSON layout");
-                drawScreenFromLayout(monitorLayout);
-            } else {
-                Serial.println("[Legacy] Drawing monitor with legacy code");
-                drawMonitorMode();
-            }
+            drawMonitorMode();
             break;
 
         case MODE_ALIGNMENT:
-            if (alignmentLayout.isValid) {
-                drawScreenFromLayout(alignmentLayout);
-            } else {
-                drawAlignmentMode();
-            }
+            drawAlignmentMode();
             break;
 
         case MODE_GRAPH:
-            if (graphLayout.isValid) {
-                drawScreenFromLayout(graphLayout);
-            } else {
-                drawGraphMode();
-            }
+            drawGraphMode();
             break;
 
         case MODE_NETWORK:
-            if (networkLayout.isValid) {
-                drawScreenFromLayout(networkLayout);
-            } else {
-                drawNetworkMode();
-            }
+            drawNetworkMode();
             break;
     }
 }
 
 void updateDisplay() {
-    if (currentMode == MODE_MONITOR) {
-        // Use JSON dynamic update if available, otherwise legacy
-        if (monitorLayout.isValid) {
-            updateDynamicElements(monitorLayout);
-        } else {
+    switch(currentMode) {
+        case MODE_MONITOR:
             updateMonitorMode();
-        }
-    } else if (currentMode == MODE_ALIGNMENT) {
-        if (alignmentLayout.isValid) {
-            updateDynamicElements(alignmentLayout);
-        } else {
+            break;
+
+        case MODE_ALIGNMENT:
             updateAlignmentMode();
-        }
-    } else if (currentMode == MODE_GRAPH) {
-        if (graphLayout.isValid) {
-            updateDynamicElements(graphLayout);
-        } else {
+            break;
+
+        case MODE_GRAPH:
             updateGraphMode();
-        }
-    } else if (currentMode == MODE_NETWORK) {
-        if (networkLayout.isValid) {
-            updateDynamicElements(networkLayout);
-        } else {
+            break;
+
+        case MODE_NETWORK:
             updateNetworkMode();
-        }
-    }
-}
-
-// Update only dynamic elements (for efficient screen updates)
-void updateDynamicElements(const ScreenLayout& layout) {
-    if (!layout.isValid) return;
-
-    for (uint8_t i = 0; i < layout.elementCount; i++) {
-        const ScreenElement& elem = layout.elements[i];
-
-        // Only update elements that display dynamic data
-        if (elem.type == ELEM_TEXT_DYNAMIC ||
-            elem.type == ELEM_TEMP_VALUE ||
-            elem.type == ELEM_COORD_VALUE ||
-            elem.type == ELEM_STATUS_VALUE ||
-            elem.type == ELEM_PROGRESS_BAR) {
-
-            // Clear the element area
-            if (elem.w > 0 && elem.h > 0) {
-                gfx.fillRect(elem.x, elem.y, elem.w, elem.h, elem.bgColor);
-            }
-
-            // Redraw the element
-            drawElement(elem);
-        }
+            break;
     }
 }
 
@@ -202,16 +149,16 @@ void drawMonitorMode() {
     sprintf(buffer, "%d%s", (int)currentTemp, cfg.use_fahrenheit ? "F" : "C");
     gfx.print(buffer);
 
-    // Peak temp (smaller, to the right)
+    // Peak temp to the right
     if (peakTemp > 0.0) {
-      gfx.setTextSize(1);
+      gfx.setTextSize(2);
       gfx.setTextColor(COLOR_LINE);
       gfx.setCursor(140, 52 + pos * 30);
       sprintf(buffer, "pk:%d%s", (int)peakTemp, cfg.use_fahrenheit ? "F" : "C");
       gfx.print(buffer);
     }
 
-    gfx.setTextSize(1);
+    gfx.setTextSize(2);
   }
 
   // Status section
