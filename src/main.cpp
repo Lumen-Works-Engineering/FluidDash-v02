@@ -244,33 +244,8 @@ void loop() {
     timing.lastHistoryUpdate = millis();
   }
 
-  // WebSocket handling (only if connection was attempted)
-  if (WiFi.status() == WL_CONNECTED && fluidnc.connectionAttempted) {
-      yield();  // Yield before WebSocket operations
-      webSocket.loop();
-      yield();  // Yield after WebSocket operations
-
-      // Always poll for status - FluidNC doesn't have automatic reporting
-      if (fluidnc.connected && (millis() - timing.lastStatusRequest >= cfg.status_update_rate)) {
-          if (fluidnc.debugWebSocket) {
-              Serial.println("[FluidNC] Sending status request");
-          }
-          yield();  // Yield before send
-          webSocket.sendTXT("?");
-          yield();  // Yield after send
-          timing.lastStatusRequest = millis();
-      }
-
-      // Periodic debug output (only every 10 seconds now)
-      static unsigned long lastDebug = 0;
-      if (fluidnc.debugWebSocket && millis() - lastDebug >= 10000) {
-          Serial.printf("[DEBUG] State:%s MPos:(%.2f,%.2f,%.2f,%.2f) WPos:(%.2f,%.2f,%.2f,%.2f)\n",
-                        fluidnc.machineState.c_str(),
-                        fluidnc.posX, fluidnc.posY, fluidnc.posZ, fluidnc.posA,
-                        fluidnc.wposX, fluidnc.wposY, fluidnc.wposZ, fluidnc.wposA);
-          lastDebug = millis();
-      }
-  }
+  // Handle WebSocket connection and status polling
+  handleWebSocketLoop();
 
 
   if (millis() - timing.lastDisplayUpdate >= 1000) {
