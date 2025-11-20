@@ -2,6 +2,7 @@
 #include "state/global_state.h"
 #include "sensors/sensors.h"
 #include <SD.h>
+#include <RTClib.h>
 #include <vector>
 
 // Global logger instance
@@ -72,14 +73,16 @@ void DataLogger::writeLogEntry() {
     }
 
     String filename = getCurrentLogFilename();
+    bool isNewFile = !SD.exists(filename.c_str());
 
     // Check if we need to rotate
-    if (SD.exists(filename.c_str())) {
+    if (!isNewFile) {
         File existingFile = SD.open(filename.c_str(), FILE_READ);
         if (existingFile && existingFile.size() > MAX_LOG_SIZE) {
             existingFile.close();
             rotateLogFile();
             filename = getCurrentLogFilename();
+            isNewFile = true;  // New file after rotation
         } else if (existingFile) {
             existingFile.close();
         }
@@ -94,15 +97,26 @@ void DataLogger::writeLogEntry() {
     }
 
     // Write CSV header if file is new
-    if (logFile.size() == 0) {
+    if (isNewFile) {
         logFile.println("Timestamp,TempX,TempYL,TempYR,TempZ,PSU_Voltage,Fan_RPM,Fan_Speed,Machine_State,Pos_X,Pos_Y,Pos_Z");
+    }
+
+    // Get timestamp from RTC (or fallback to uptime)
+    char timestamp[32];
+    if (network.rtcAvailable) {
+        DateTime now = rtc.now();
+        snprintf(timestamp, sizeof(timestamp), "%04d-%02d-%02d %02d:%02d:%02d",
+                 now.year(), now.month(), now.day(),
+                 now.hour(), now.minute(), now.second());
+    } else {
+        snprintf(timestamp, sizeof(timestamp), "%lu", millis() / 1000);
     }
 
     // Write data row
     char logLine[256];
     snprintf(logLine, sizeof(logLine),
-        "%lu,%.1f,%.1f,%.1f,%.1f,%.2f,%d,%d,%s,%.3f,%.3f,%.3f",
-        millis() / 1000,  // Timestamp in seconds
+        "%s,%.1f,%.1f,%.1f,%.1f,%.2f,%d,%d,%s,%.3f,%.3f,%.3f",
+        timestamp,  // RTC timestamp or uptime
         sensors.temperatures[0],
         sensors.temperatures[1],
         sensors.temperatures[2],
