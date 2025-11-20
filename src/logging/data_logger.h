@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <SD.h>
+#include <vector>
 
 class DataLogger {
 public:
