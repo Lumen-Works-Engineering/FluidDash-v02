@@ -14,6 +14,8 @@
 #include <RTClib.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include <SD.h>
+#include <LittleFS.h>
 
 
 // Web server handler functions
@@ -552,7 +554,7 @@ void handleAPILogsEnable() {
   bool enabled = doc["enabled"] | false;
   logger.setEnabled(enabled);
 
-  if (doc.containsKey("interval")) {
+  if (!doc["interval"].isNull()) {
     unsigned long interval = doc["interval"];
     if (interval >= 1000 && interval <= 600000) {  // 1s to 10min
       logger.setInterval(interval);
@@ -621,7 +623,14 @@ void handleAPILogsDownload() {
     return;
   }
 
-  File file = storage.openFile(filepath.c_str(), FILE_READ);
+  // Open file directly from SD or LittleFS for streaming
+  File file;
+  if (storage.isSDAvailable() && SD.exists(filepath.c_str())) {
+    file = SD.open(filepath.c_str(), FILE_READ);
+  } else if (storage.isSPIFFSAvailable() && LittleFS.exists(filepath.c_str())) {
+    file = LittleFS.open(filepath.c_str(), FILE_READ);
+  }
+
   if (!file) {
     sendJsonError(server, 500, "Failed to open file", "Could not open log file");
     return;
