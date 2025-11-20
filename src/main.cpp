@@ -22,6 +22,7 @@
 #include "utils/utils.h"
 #include "web/web_utils.h"
 #include "input/touch_handler.h"
+#include "logging/data_logger.h"
 #include <Wire.h>
 #include <RTClib.h>
 #include <WiFi.h>
@@ -210,6 +211,10 @@ void setup() {
   drawScreen();
   yield();
 
+  // Initialize data logger (disabled by default)
+  logger.begin();
+  Serial.println("Data logger initialized (disabled by default)");
+
   // Mark boot complete time for deferred FluidNC connection
   timing.bootCompleteTime = millis();
   Serial.println("Setup complete - entering main loop");
@@ -254,6 +259,9 @@ void loop() {
     updateDisplay();
     timing.lastDisplayUpdate = millis();
   }
+
+  // Update data logger (if enabled)
+  logger.update();
 
   // Short yield instead of delay for better responsiveness
   yield();
