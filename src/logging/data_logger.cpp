@@ -51,9 +51,15 @@ void DataLogger::setInterval(unsigned long intervalMs) {
 
 String DataLogger::getCurrentLogFilename() {
     if (_currentLogFile.length() == 0) {
-        // Generate filename based on current date: fluiddash_YYYYMMDD.csv
-        char filename[32];
-        snprintf(filename, sizeof(filename), "/logs/fluiddash_%lu.csv", millis() / 86400000);
+        // Generate filename based on RTC date or boot time
+        char filename[48];
+        if (network.rtcAvailable) {
+            DateTime now = rtc.now();
+            snprintf(filename, sizeof(filename), "/logs/fluiddash_%04d%02d%02d.csv",
+                     now.year(), now.month(), now.day());
+        } else {
+            snprintf(filename, sizeof(filename), "/logs/fluiddash_%lu.csv", millis() / 86400000);
+        }
         _currentLogFile = String(filename);
     }
     return _currentLogFile;
