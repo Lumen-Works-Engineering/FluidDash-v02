@@ -21,16 +21,26 @@ void handleTouchInput() {
         }
         lastTouchTime = now;
 
+        // Debug: Print touch coordinates
+        Serial.print("[TOUCH] Detected at X=");
+        Serial.print(x);
+        Serial.print(", Y=");
+        Serial.println(y);
+
         // Detect touch zones based on Y coordinate
         if (y < TOUCH_ZONE_HEADER_Y_MAX) {
             // Header tap - enter WiFi setup mode
+            Serial.println("[TOUCH] Header zone tapped - entering setup mode");
             enterSetupMode();
         } else if (y > TOUCH_ZONE_FOOTER_Y_MIN) {
             // Footer tap - cycle to next screen
+            Serial.println("[TOUCH] Footer zone tapped - cycling mode");
             cycleModeForward();
             drawScreen();
+        } else {
+            // Middle area - no action
+            Serial.println("[TOUCH] Middle zone tapped - no action");
         }
-        // Middle area - no action (could be used for future features)
     }
 }
 
