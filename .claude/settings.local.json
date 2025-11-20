@@ -5,10 +5,12 @@
       "Bash(git mv:*)",
       "Bash(powershell -Command \"cd ''c:\\Users\\john_sparks\\Documents\\PlatformIO\\Projects\\FluidDash-v02''; pio run -e esp32dev 2>&1 | Select-Object -Last 50\")",
       "Bash(powershell -Command:*)",
+      "Bash(git checkout:*)",
       "Bash(git merge:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
