@@ -58,10 +58,12 @@ LGFX::LGFX(void)
 
   {
     auto cfg = _touch_instance.config();
-    cfg.x_min = 0;
-    cfg.x_max = 319;
-    cfg.y_min = 0;
-    cfg.y_max = 479;
+    // XPT2046 raw ADC calibration values for ESP32-2432S028
+    // These map raw touch coordinates to screen coordinates
+    cfg.x_min = 300;      // Left edge raw value
+    cfg.x_max = 3900;     // Right edge raw value
+    cfg.y_min = 62000;    // Top edge raw value
+    cfg.y_max = 65500;    // Bottom edge raw value
     cfg.pin_int  = -1;           // No interrupt pin
     cfg.pin_cs   = TOUCH_CS;     // GPIO 33
     cfg.pin_rst  = -1;           // No reset pin
