@@ -16,6 +16,9 @@ void discoverFluidNC();
 void fluidNCWebSocketEvent(WStype_t type, uint8_t * payload, size_t length);
 void parseFluidNCStatus(String status);
 
+// WebSocket loop handling (call from main loop)
+void handleWebSocketLoop();
+
 // ========== External Variables ==========
 // These are defined in main.cpp and accessed by network functions
 extern WebSocketsClient webSocket;

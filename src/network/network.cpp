@@ -1,4 +1,5 @@
 #include "network.h"
+#include "../state/global_state.h"
 #include "config/config.h"
 #include <WiFi.h>
 #include <WiFiManager.h>
@@ -68,24 +69,24 @@ void fluidNCWebSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
     switch(type) {
         case WStype_DISCONNECTED:
             Serial.println("[FluidNC] Disconnected!");
-            fluidncConnected = false;
-            machineState = "OFFLINE";
+            fluidnc.connected = false;
+            fluidnc.machineState = "OFFLINE";
             break;
 
         case WStype_CONNECTED:
             Serial.printf("[FluidNC] Connected to: %s\n", payload);
-            fluidncConnected = true;
-            machineState = "IDLE";
+            fluidnc.connected = true;
+            fluidnc.machineState = "IDLE";
 
             // DON'T send ReportInterval - FluidNC doesn't support it
             // We'll use manual polling with ? status requests
-            reportingSetupTime = millis();
+            fluidnc.reportingSetupTime = millis();
             break;
 
         case WStype_TEXT:
             {
                 char* msg = (char*)payload;
-                if (debugWebSocket) {
+                if (fluidnc.debugWebSocket) {
                     Serial.printf("[FluidNC] RX TEXT (%d bytes): ", length);
                     for(size_t i = 0; i < length; i++) {
                         Serial.print(msg[i]);
@@ -97,7 +98,7 @@ void fluidNCWebSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
                 if (msgStr.startsWith("<")) {
                     parseFluidNCStatus(msgStr);
                 } else if (msgStr.startsWith("ALARM:")) {
-                    machineState = "ALARM";
+                    fluidnc.machineState = "ALARM";
                     parseFluidNCStatus(msgStr);
                 }
             }
@@ -106,7 +107,7 @@ void fluidNCWebSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         case WStype_BIN:
             {
                 // FluidNC sends status as BINARY data
-                if (debugWebSocket) {
+                if (fluidnc.debugWebSocket) {
                     Serial.printf("[FluidNC] RX BINARY (%d bytes): ", length);
                 }
 
@@ -116,7 +117,7 @@ void fluidNCWebSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
                     memcpy(msg, payload, length);
                     msg[length] = '\0';
 
-                    if (debugWebSocket) {
+                    if (fluidnc.debugWebSocket) {
                         Serial.println(msg);
                     }
 
@@ -143,7 +144,7 @@ void fluidNCWebSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
             break;
 
         default:
-            if (debugWebSocket) {
+            if (fluidnc.debugWebSocket) {
                 Serial.printf("[FluidNC] Event type: %d\n", type);
             }
             break;
@@ -151,22 +152,22 @@ void fluidNCWebSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 }
 
 void parseFluidNCStatus(String status) {
-    String oldState = machineState;
+    String oldState = fluidnc.machineState;
 
     // Parse state (between < and |)
     int stateEnd = status.indexOf('|');
     if (stateEnd > 0) {
         String state = status.substring(1, stateEnd);
-        machineState = state;
-        machineState.toUpperCase();
+        fluidnc.machineState = state;
+        fluidnc.machineState.toUpperCase();
 
         // Job tracking
-        if (oldState != "RUN" && machineState == "RUN") {
-            jobStartTime = millis();
-            isJobRunning = true;
+        if (oldState != "RUN" && fluidnc.machineState == "RUN") {
+            fluidnc.jobStartTime = millis();
+            fluidnc.isJobRunning = true;
         }
-        if (oldState == "RUN" && machineState != "RUN") {
-            isJobRunning = false;
+        if (oldState == "RUN" && fluidnc.machineState != "RUN") {
+            fluidnc.isJobRunning = false;
         }
     }
 
@@ -185,11 +186,11 @@ void parseFluidNCStatus(String status) {
 
         if (commaCount >= 3) {
             // 4-axis machine
-            sscanf(posStr.c_str(), "%f,%f,%f,%f", &posX, &posY, &posZ, &posA);
+            sscanf(posStr.c_str(), "%f,%f,%f,%f", &fluidnc.posX, &fluidnc.posY, &fluidnc.posZ, &fluidnc.posA);
         } else {
             // 3-axis machine
-            sscanf(posStr.c_str(), "%f,%f,%f", &posX, &posY, &posZ);
-            posA = 0;
+            sscanf(posStr.c_str(), "%f,%f,%f", &fluidnc.posX, &fluidnc.posY, &fluidnc.posZ);
+            fluidnc.posA = 0;
         }
     }
 
@@ -206,17 +207,17 @@ void parseFluidNCStatus(String status) {
         }
 
         if (commaCount >= 3) {
-            sscanf(posStr.c_str(), "%f,%f,%f,%f", &wposX, &wposY, &wposZ, &wposA);
+            sscanf(posStr.c_str(), "%f,%f,%f,%f", &fluidnc.wposX, &fluidnc.wposY, &fluidnc.wposZ, &fluidnc.wposA);
         } else {
-            sscanf(posStr.c_str(), "%f,%f,%f", &wposX, &wposY, &wposZ);
-            wposA = 0;
+            sscanf(posStr.c_str(), "%f,%f,%f", &fluidnc.wposX, &fluidnc.wposY, &fluidnc.wposZ);
+            fluidnc.wposA = 0;
         }
     } else {
         // No WPos - use MPos
-        wposX = posX;
-        wposY = posY;
-        wposZ = posZ;
-        wposA = posA;
+        fluidnc.wposX = fluidnc.posX;
+        fluidnc.wposY = fluidnc.posY;
+        fluidnc.wposZ = fluidnc.posZ;
+        fluidnc.wposA = fluidnc.posA;
     }
 
     // Parse WCO (Work Coordinate Offset) if present
@@ -232,17 +233,17 @@ void parseFluidNCStatus(String status) {
         }
 
         if (commaCount >= 3) {
-            sscanf(wcoStr.c_str(), "%f,%f,%f,%f", &wcoX, &wcoY, &wcoZ, &wcoA);
+            sscanf(wcoStr.c_str(), "%f,%f,%f,%f", &fluidnc.wcoX, &fluidnc.wcoY, &fluidnc.wcoZ, &fluidnc.wcoA);
         } else {
-            sscanf(wcoStr.c_str(), "%f,%f,%f", &wcoX, &wcoY, &wcoZ);
-            wcoA = 0;
+            sscanf(wcoStr.c_str(), "%f,%f,%f", &fluidnc.wcoX, &fluidnc.wcoY, &fluidnc.wcoZ);
+            fluidnc.wcoA = 0;
         }
 
         // Calculate WPos from MPos - WCO
-        wposX = posX - wcoX;
-        wposY = posY - wcoY;
-        wposZ = posZ - wcoZ;
-        wposA = posA - wcoA;
+        fluidnc.wposX = fluidnc.posX - fluidnc.wcoX;
+        fluidnc.wposY = fluidnc.posY - fluidnc.wcoY;
+        fluidnc.wposZ = fluidnc.posZ - fluidnc.wcoZ;
+        fluidnc.wposA = fluidnc.posA - fluidnc.wcoA;
     }
 
     // Parse FS (Feed rate and Spindle speed)
@@ -251,7 +252,7 @@ void parseFluidNCStatus(String status) {
         int endIndex = status.indexOf('|', fsIndex);
         if (endIndex < 0) endIndex = status.indexOf('>', fsIndex);
         String fsStr = status.substring(fsIndex + 3, endIndex);
-        sscanf(fsStr.c_str(), "%d,%d", &feedRate, &spindleRPM);
+        sscanf(fsStr.c_str(), "%d,%d", &fluidnc.feedRate, &fluidnc.spindleRPM);
     }
 
     // Parse Ov (Overrides) if present
@@ -260,6 +261,41 @@ void parseFluidNCStatus(String status) {
         int endIndex = status.indexOf('|', ovIndex);
         if (endIndex < 0) endIndex = status.indexOf('>', ovIndex);
         String ovStr = status.substring(ovIndex + 3, endIndex);
-        sscanf(ovStr.c_str(), "%d,%d,%d", &feedOverride, &rapidOverride, &spindleOverride);
+        sscanf(ovStr.c_str(), "%d,%d,%d", &fluidnc.feedOverride, &fluidnc.rapidOverride, &fluidnc.spindleOverride);
+    }
+}
+
+// ========== WebSocket Loop Handling ==========
+
+void handleWebSocketLoop() {
+    // Only process WebSocket if connected to WiFi and connection was attempted
+    if (WiFi.status() != WL_CONNECTED || !fluidnc.connectionAttempted) {
+        return;
+    }
+
+    // Process WebSocket events
+    yield();  // Yield before WebSocket operations
+    webSocket.loop();
+    yield();  // Yield after WebSocket operations
+
+    // Poll for status if connected (FluidNC doesn't have automatic reporting)
+    if (fluidnc.connected && (millis() - timing.lastStatusRequest >= cfg.status_update_rate)) {
+        if (fluidnc.debugWebSocket) {
+            Serial.println("[FluidNC] Sending status request");
+        }
+        yield();  // Yield before send
+        webSocket.sendTXT("?");
+        yield();  // Yield after send
+        timing.lastStatusRequest = millis();
+    }
+
+    // Periodic debug output (only every 10 seconds)
+    static unsigned long lastDebug = 0;
+    if (fluidnc.debugWebSocket && millis() - lastDebug >= 10000) {
+        Serial.printf("[DEBUG] State:%s MPos:(%.2f,%.2f,%.2f,%.2f) WPos:(%.2f,%.2f,%.2f,%.2f)\n",
+                      fluidnc.machineState.c_str(),
+                      fluidnc.posX, fluidnc.posY, fluidnc.posZ, fluidnc.posA,
+                      fluidnc.wposX, fluidnc.wposY, fluidnc.wposZ, fluidnc.wposA);
+        lastDebug = millis();
     }
 }

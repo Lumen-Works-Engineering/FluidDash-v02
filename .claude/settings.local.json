@@ -3,7 +3,8 @@
     "allow": [
       "Bash(pio run:*)",
       "Bash(git mv:*)",
-      "Bash(powershell -Command \"cd ''c:\\Users\\john_sparks\\Documents\\PlatformIO\\Projects\\FluidDash-v02''; pio run -e esp32dev 2>&1 | Select-Object -Last 50\")"
+      "Bash(powershell -Command \"cd ''c:\\Users\\john_sparks\\Documents\\PlatformIO\\Projects\\FluidDash-v02''; pio run -e esp32dev 2>&1 | Select-Object -Last 50\")",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

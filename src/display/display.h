@@ -7,12 +7,11 @@
 // LovyanGFX Display Configuration for ST7796 480x320
 class LGFX : public lgfx::LGFX_Device
 {
-  lgfx::Panel_ST7796 _panel_instance;
-  lgfx::Bus_SPI _bus_instance;
-  lgfx::Light_PWM _light_instance;
-
+    lgfx::Panel_ST7796 _panel_instance;
+    lgfx::Bus_SPI _bus_instance;
+    lgfx::Light_PWM _light_instance;
 public:
-  LGFX(void);
+    LGFX(void);
 };
 
 // Global display instance

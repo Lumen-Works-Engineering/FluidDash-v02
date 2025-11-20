@@ -1,4 +1,5 @@
 #include "sensors.h"
+#include "../state/global_state.h"
 #include "config/pins.h"
 #include "config/config.h"
 #include <Arduino.h>
@@ -40,15 +41,15 @@ float calculateThermistorTemp(float adcValue) {
 
 // Update temperature history buffer with max temperature
 void updateTempHistory() {
-  float maxTemp = temperatures[0];
+  float maxTemp = sensors.temperatures[0];
   for (int i = 1; i < 4; i++) {
-    if (temperatures[i] > maxTemp) {
-      maxTemp = temperatures[i];
+    if (sensors.temperatures[i] > maxTemp) {
+      maxTemp = sensors.temperatures[i];
     }
   }
 
-  tempHistory[historyIndex] = maxTemp;
-  historyIndex = (historyIndex + 1) % historySize;
+  history.tempHistory[history.historyIndex] = maxTemp;
+  history.historyIndex = (history.historyIndex + 1) % history.historySize;
 }
 
 // ========== Fan Control ==========
@@ -56,24 +57,24 @@ void updateTempHistory() {
 // Control fan speed based on maximum temperature
 // Maps temperature between low and high thresholds to fan speed range
 void controlFan() {
-  float maxTemp = temperatures[0];
+  float maxTemp = sensors.temperatures[0];
   for (int i = 1; i < 4; i++) {
-    if (temperatures[i] > maxTemp) {
-      maxTemp = temperatures[i];
+    if (sensors.temperatures[i] > maxTemp) {
+      maxTemp = sensors.temperatures[i];
     }
   }
 
   if (maxTemp < cfg.temp_threshold_low) {
-    fanSpeed = cfg.fan_min_speed;
+    sensors.fanSpeed = cfg.fan_min_speed;
   } else if (maxTemp > cfg.temp_threshold_high) {
-    fanSpeed = cfg.fan_max_speed_limit;
+    sensors.fanSpeed = cfg.fan_max_speed_limit;
   } else {
-    fanSpeed = map(maxTemp * 100, cfg.temp_threshold_low * 100,
+    sensors.fanSpeed = map(maxTemp * 100, cfg.temp_threshold_low * 100,
                    cfg.temp_threshold_high * 100,
                    cfg.fan_min_speed, cfg.fan_max_speed_limit);
   }
 
-  uint8_t pwmValue = map(fanSpeed, 0, 100, 0, 255);
+  uint8_t pwmValue = map(sensors.fanSpeed, 0, 100, 0, 255);
   ledcWrite(0, pwmValue);  // channel 0
 }
 
@@ -81,8 +82,8 @@ void controlFan() {
 // Assumes tachISR() is incrementing tachCounter on each pulse
 // Most fans output 2 pulses per revolution
 void calculateRPM() {
-  fanRPM = (tachCounter * 60) / 2;
-  tachCounter = 0;
+  sensors.fanRPM = (sensors.tachCounter * 60) / 2;
+  sensors.tachCounter = 0;
 }
 
 // Tachometer interrupt handler (IRAM for fast execution)
@@ -96,20 +97,20 @@ void calculateRPM() {
 // Non-blocking sensor sampling - call this repeatedly in loop()
 // Samples PSU voltage ADC every 5ms and averages 10 samples
 void sampleSensorsNonBlocking() {
-  if (millis() - lastAdcSample < 5) {
+  if (millis() - sensors.lastAdcSample < 5) {
     return;  // Sample every 5ms
   }
-  lastAdcSample = millis();
+  sensors.lastAdcSample = millis();
 
   // CYD NOTE: Only PSU voltage is ADC-based now (temperatures use DS18B20 OneWire)
   // Take one sample from PSU voltage sensor only
-  adcSamples[4][adcSampleIndex] = analogRead(PSU_VOLT);  // Index 4 = PSU voltage
+  sensors.adcSamples[4][sensors.adcSampleIndex] = analogRead(PSU_VOLT);  // Index 4 = PSU voltage
 
   // Move to next sample
-  adcSampleIndex++;
-  if (adcSampleIndex >= 10) {
-    adcSampleIndex = 0;
-    adcReady = true;  // PSU voltage sampling complete
+  sensors.adcSampleIndex++;
+  if (sensors.adcSampleIndex >= 10) {
+    sensors.adcSampleIndex = 0;
+    sensors.adcReady = true;  // PSU voltage sampling complete
   }
 }
 
@@ -124,7 +125,7 @@ void processAdcReadings() {
 
   // Clear temperatures array first
   for (int i = 0; i < 4; i++) {
-    temperatures[i] = 0.0;
+    sensors.temperatures[i] = 0.0;
   }
 
   // Read temperatures based on sensor mappings and their display positions
@@ -133,9 +134,9 @@ void processAdcReadings() {
       float temp = ds18b20Sensors.getTempC(sensorMappings[i].uid);
       if (temp != DEVICE_DISCONNECTED_C && temp > -55.0 && temp < 125.0) {
         int pos = sensorMappings[i].displayPosition;  // Use displayPosition, not array index
-        temperatures[pos] = temp;
-        if (temp > peakTemps[pos]) {
-          peakTemps[pos] = temp;
+        sensors.temperatures[pos] = temp;
+        if (temp > sensors.peakTemps[pos]) {
+          sensors.peakTemps[pos] = temp;
         }
       }
     }
@@ -146,9 +147,9 @@ void processAdcReadings() {
     for (int i = 0; i < min(deviceCount, 4); i++) {
       float temp = ds18b20Sensors.getTempCByIndex(i);
       if (temp != DEVICE_DISCONNECTED_C && temp > -55.0 && temp < 125.0) {
-        temperatures[i] = temp;
-        if (temp > peakTemps[i]) {
-          peakTemps[i] = temp;
+        sensors.temperatures[i] = temp;
+        if (temp > sensors.peakTemps[i]) {
+          sensors.peakTemps[i] = temp;
         }
       }
     }
@@ -157,14 +158,14 @@ void processAdcReadings() {
   // Process PSU voltage
   uint32_t sum = 0;
   for (int i = 0; i < 10; i++) {
-    sum += adcSamples[4][i];
+    sum += sensors.adcSamples[4][i];
   }
   float adcValue = sum / 10.0;
   float measuredVoltage = (adcValue / ADC_RESOLUTION) * 3.3;
-  psuVoltage = measuredVoltage * cfg.psu_voltage_cal;
+  sensors.psuVoltage = measuredVoltage * cfg.psu_voltage_cal;
 
-  if (psuVoltage < psuMin && psuVoltage > 10.0) psuMin = psuVoltage;
-  if (psuVoltage > psuMax) psuMax = psuVoltage;
+  if (sensors.psuVoltage < sensors.psuMin && sensors.psuVoltage > 10.0) sensors.psuMin = sensors.psuVoltage;
+  if (sensors.psuVoltage > sensors.psuMax) sensors.psuMax = sensors.psuVoltage;
 }
 
 // ========== Sensor Management Functions ==========
