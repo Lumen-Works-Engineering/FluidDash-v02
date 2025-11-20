@@ -21,6 +21,7 @@
 #include "network/network.h"
 #include "utils/utils.h"
 #include "web/web_utils.h"
+#include "input/touch_handler.h"
 #include <Wire.h>
 #include <RTClib.h>
 #include <WiFi.h>
@@ -223,6 +224,7 @@ void loop() {
   server.handleClient();
   yield();
   handleButton();
+  handleTouchInput();  // Handle touchscreen input
 
   // Non-blocking ADC sampling (takes one sample every 5ms)
   sampleSensorsNonBlocking();

@@ -56,6 +56,22 @@ LGFX::LGFX(void)
     _panel_instance.setLight(&_light_instance);
   }
 
+  {
+    auto cfg = _touch_instance.config();
+    cfg.x_min = 0;
+    cfg.x_max = 319;
+    cfg.y_min = 0;
+    cfg.y_max = 479;
+    cfg.pin_int  = -1;           // No interrupt pin
+    cfg.pin_cs   = TOUCH_CS;     // GPIO 33
+    cfg.pin_rst  = -1;           // No reset pin
+    cfg.spi_host = HSPI_HOST;    // Same SPI bus as display
+    cfg.freq = 1000000;          // 1 MHz
+    cfg.bus_shared = true;       // Shared with display
+    _touch_instance.config(cfg);
+    _panel_instance.setTouch(&_touch_instance);
+  }
+
   setPanel(&_panel_instance);
 }
 
