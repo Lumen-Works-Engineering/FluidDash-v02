@@ -7,12 +7,15 @@
 #include "utils/utils.h"
 #include "web/web_utils.h"
 #include "storage_manager.h"
+#include "logging/data_logger.h"
 #include <WiFi.h>
 #include <WebServer.h>
 #include <WiFiManager.h>
 #include <RTClib.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include <SD.h>
+#include <LittleFS.h>
 
 
 // Web server handler functions
@@ -530,6 +533,128 @@ void handleAPIDriversClear() {
   server.send(200, "application/json", "{\"success\":true,\"message\":\"Position was not assigned\"}");
 }
 
+// ========== Data Logger API Handlers (Phase 3) ==========
+
+// POST /api/logs/enable - Enable or disable data logging
+// Body: {"enabled": true, "interval": 10000} (interval in milliseconds, optional)
+void handleAPILogsEnable() {
+  if (!server.hasArg("plain")) {
+    sendJsonError(server, 400, "Missing request body", "POST body with JSON required");
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, server.arg("plain"));
+
+  if (error) {
+    sendJsonError(server, 400, "Invalid JSON", error.c_str());
+    return;
+  }
+
+  bool enabled = doc["enabled"] | false;
+  logger.setEnabled(enabled);
+
+  if (!doc["interval"].isNull()) {
+    unsigned long interval = doc["interval"];
+    if (interval >= 1000 && interval <= 600000) {  // 1s to 10min
+      logger.setInterval(interval);
+    }
+  }
+
+  JsonDocument response;
+  response["success"] = true;
+  response["enabled"] = logger.isEnabled();
+  response["message"] = enabled ? "Logging enabled" : "Logging disabled";
+
+  String output;
+  serializeJson(response, output);
+  server.send(200, "application/json", output);
+}
+
+// GET /api/logs/status - Get current logging status
+void handleAPILogsStatus() {
+  JsonDocument doc;
+  doc["enabled"] = logger.isEnabled();
+  doc["currentFile"] = logger.getCurrentLogFilename();
+
+  String output;
+  serializeJson(doc, output);
+  server.send(200, "application/json", output);
+}
+
+// GET /api/logs/list - List all log files
+// Returns: {"files": ["2025-01-20_143022.csv", "2025-01-20_150015.csv"], "count": 2}
+void handleAPILogsList() {
+  std::vector<String> files = logger.listLogFiles();
+
+  JsonDocument doc;
+  JsonArray filesArray = doc["files"].to<JsonArray>();
+
+  for (const String& file : files) {
+    filesArray.add(file);
+  }
+
+  doc["count"] = files.size();
+
+  String output;
+  serializeJson(doc, output);
+  server.send(200, "application/json", output);
+}
+
+// GET /api/logs/download?file=<filename> - Download a specific log file
+void handleAPILogsDownload() {
+  if (!server.hasArg("file")) {
+    sendJsonError(server, 400, "Missing parameter", "'file' parameter required");
+    return;
+  }
+
+  String filename = server.arg("file");
+
+  // Security: prevent directory traversal
+  if (filename.indexOf("..") >= 0 || filename.indexOf("/") >= 0) {
+    sendJsonError(server, 400, "Invalid filename", "Filename cannot contain '..' or '/'");
+    return;
+  }
+
+  String filepath = String("/logs/") + filename;
+
+  if (!storage.exists(filepath.c_str())) {
+    sendJsonError(server, 404, "File not found", "Log file does not exist");
+    return;
+  }
+
+  // Open file directly from SD or LittleFS for streaming
+  File file;
+  if (storage.isSDAvailable() && SD.exists(filepath.c_str())) {
+    file = SD.open(filepath.c_str(), FILE_READ);
+  } else if (storage.isSPIFFSAvailable() && LittleFS.exists(filepath.c_str())) {
+    file = LittleFS.open(filepath.c_str(), FILE_READ);
+  }
+
+  if (!file) {
+    sendJsonError(server, 500, "Failed to open file", "Could not open log file");
+    return;
+  }
+
+  // Stream the file to client
+  server.sendHeader("Content-Disposition", "attachment; filename=" + filename);
+  server.streamFile(file, "text/csv");
+  file.close();
+}
+
+// DELETE /api/logs/clear - Delete all log files
+void handleAPILogsClear() {
+  bool success = logger.deleteAllLogs();
+
+  JsonDocument doc;
+  doc["success"] = success;
+  doc["message"] = success ? "All log files deleted" : "Failed to delete log files";
+
+  String output;
+  serializeJson(doc, output);
+  server.send(success ? 200 : 500, "application/json", output);
+}
+
 // ========== Web Server Setup ==========
 
 void setupWebServer() {
@@ -568,6 +693,13 @@ void setupWebServer() {
   server.on("/api/drivers/get", HTTP_GET, handleAPIDriversGet);
   server.on("/api/drivers/assign", HTTP_POST, handleAPIDriversAssign);
   server.on("/api/drivers/clear", HTTP_POST, handleAPIDriversClear);
+
+  // Data logger API endpoints (Phase 3)
+  server.on("/api/logs/enable", HTTP_POST, handleAPILogsEnable);
+  server.on("/api/logs/status", HTTP_GET, handleAPILogsStatus);
+  server.on("/api/logs/list", HTTP_GET, handleAPILogsList);
+  server.on("/api/logs/download", HTTP_GET, handleAPILogsDownload);
+  server.on("/api/logs/clear", HTTP_DELETE, handleAPILogsClear);
 
   // 404 handler
   server.onNotFound([]() {

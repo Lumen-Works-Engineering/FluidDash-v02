@@ -17,7 +17,25 @@ void handleAPIConfig();
 void handleAPIStatus();
 void handleAPISave();
 void handleAPIAdminSave();
-// ... etc
+void handleAPIResetWiFi();
+void handleAPIRestart();
+void handleAPIWiFiConnect();
+void handleAPIRTC();
+void handleAPIRTCSet();
+void handleAPISensorsDiscover();
+void handleAPISensorsList();
+void handleAPISensorsSave();
+void handleAPISensorsTemps();
+void handleAPISensorsDetect();
+void handleAPIDriversGet();
+void handleAPIDriversAssign();
+void handleAPIDriversClear();
+// Data logger API handlers (Phase 3)
+void handleAPILogsEnable();
+void handleAPILogsStatus();
+void handleAPILogsList();
+void handleAPILogsDownload();
+void handleAPILogsClear();
 
 // HTML generators
 String getMainHTML();

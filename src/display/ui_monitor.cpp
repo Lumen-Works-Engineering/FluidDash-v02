@@ -1,4 +1,5 @@
 #include "ui_modes.h"
+#include "ui_layout.h"
 #include "state/global_state.h"
 #include "display.h"
 #include "config/config.h"
@@ -20,10 +21,10 @@ void drawMonitorMode() {
   gfx.fillScreen(COLOR_BG);
 
   // Header
-  gfx.fillRect(0, 0, SCREEN_WIDTH, 25, COLOR_HEADER);
+  gfx.fillRect(0, 0, SCREEN_WIDTH, CommonLayout::HEADER_HEIGHT, COLOR_HEADER);
   gfx.setTextColor(COLOR_TEXT);
-  gfx.setTextSize(2);
-  gfx.setCursor(10, 6);
+  gfx.setTextSize(MonitorLayout::HEADER_FONT_SIZE);
+  gfx.setCursor(MonitorLayout::HEADER_TITLE_X, MonitorLayout::HEADER_TITLE_Y);
   gfx.print("FluidDash");
 
   // DateTime in header (right side)
@@ -35,18 +36,18 @@ void drawMonitorMode() {
   } else {
     sprintf(buffer, "No RTC");
   }
-  gfx.setCursor(270, 6);
+  gfx.setCursor(MonitorLayout::DATETIME_X, MonitorLayout::DATETIME_Y);
   gfx.print(buffer);
 
   // Dividers
-  gfx.drawFastHLine(0, 25, SCREEN_WIDTH, COLOR_LINE);
-  gfx.drawFastHLine(0, 175, SCREEN_WIDTH, COLOR_LINE);
-  gfx.drawFastVLine(240, 25, 150, COLOR_LINE);
+  gfx.drawFastHLine(0, MonitorLayout::TOP_DIVIDER_Y, SCREEN_WIDTH, COLOR_LINE);
+  gfx.drawFastHLine(0, MonitorLayout::MIDDLE_DIVIDER_Y, SCREEN_WIDTH, COLOR_LINE);
+  gfx.drawFastVLine(MonitorLayout::VERTICAL_DIVIDER_X, MonitorLayout::TOP_DIVIDER_Y, MonitorLayout::VERTICAL_DIVIDER_HEIGHT, COLOR_LINE);
 
   // Left section - Driver temperatures
-  gfx.setTextSize(1);
+  gfx.setTextSize(MonitorLayout::TEMP_LABEL_FONT_SIZE);
   gfx.setTextColor(COLOR_TEXT);
-  gfx.setCursor(10, 30);
+  gfx.setCursor(MonitorLayout::TEMP_SECTION_X, MonitorLayout::TEMP_LABEL_Y);
   gfx.print("TEMPS:");
 
   // Default labels (used if no sensor mappings configured)
@@ -54,7 +55,8 @@ void drawMonitorMode() {
 
   // Display driver temps by position (0=X, 1=YL, 2=YR, 3=Z)
   for (int pos = 0; pos < 4; pos++) {
-    gfx.setCursor(10, 50 + pos * 30);
+    int rowY = MonitorLayout::TEMP_START_Y + pos * MonitorLayout::TEMP_ROW_SPACING;
+    gfx.setCursor(MonitorLayout::TEMP_LABEL_X, rowY);
     gfx.setTextColor(COLOR_TEXT);
 
     // Find sensor assigned to this display position
@@ -83,17 +85,17 @@ void drawMonitorMode() {
     }
 
     // Current temp
-    gfx.setTextSize(2);
+    gfx.setTextSize(MonitorLayout::TEMP_VALUE_FONT_SIZE);
     gfx.setTextColor(currentTemp > cfg.temp_threshold_high ? COLOR_WARN : COLOR_VALUE);
-    gfx.setCursor(50, 47 + pos * 30);
+    gfx.setCursor(MonitorLayout::TEMP_VALUE_X, rowY + MonitorLayout::TEMP_VALUE_Y_OFFSET);
     sprintf(buffer, "%d%s", (int)currentTemp, cfg.use_fahrenheit ? "F" : "C");
     gfx.print(buffer);
 
     // Peak temp to the right
     if (peakTemp > 0.0) {
-      gfx.setTextSize(1);
+      gfx.setTextSize(MonitorLayout::PEAK_TEMP_FONT_SIZE);
       gfx.setTextColor(COLOR_LINE);
-      gfx.setCursor(140, 52 + pos * 30);
+      gfx.setCursor(MonitorLayout::PEAK_TEMP_X, rowY + MonitorLayout::PEAK_TEMP_Y_OFFSET);
       sprintf(buffer, "pk:%d%s", (int)peakTemp, cfg.use_fahrenheit ? "F" : "C");
       gfx.print(buffer);
     }
@@ -103,19 +105,19 @@ void drawMonitorMode() {
 
   // Status section
   gfx.setTextColor(COLOR_TEXT);
-  gfx.setCursor(10, 185);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_LABEL_Y);
   gfx.print("STATUS:");
 
-  gfx.setCursor(10, 200);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_FAN_Y);
   gfx.setTextColor(COLOR_LINE);
   sprintf(buffer, "Fan: %d%% (%dRPM)", sensors.fanSpeed, sensors.fanRPM);
   gfx.print(buffer);
 
-  gfx.setCursor(10, 215);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_PSU_Y);
   sprintf(buffer, "PSU: %.1fV", sensors.psuVoltage);
   gfx.print(buffer);
 
-  gfx.setCursor(10, 230);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_FLUIDNC_Y);
   if (fluidnc.connected) {
     if (fluidnc.machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
     else if (fluidnc.machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
@@ -129,7 +131,7 @@ void drawMonitorMode() {
 
   // Coordinates
   gfx.setTextColor(COLOR_TEXT);
-  gfx.setCursor(10, 250);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_COORDS_WCS_Y);
   if (cfg.coord_decimal_places == 3) {
     sprintf(buffer, "WCS: X:%.3f Y:%.3f Z:%.3f", fluidnc.wposX, fluidnc.wposY, fluidnc.wposZ);
   } else {
@@ -137,7 +139,7 @@ void drawMonitorMode() {
   }
   gfx.print(buffer);
 
-  gfx.setCursor(10, 265);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_COORDS_MCS_Y);
   if (cfg.coord_decimal_places == 3) {
     sprintf(buffer, "MCS: X:%.3f Y:%.3f Z:%.3f", fluidnc.posX, fluidnc.posY, fluidnc.posZ);
   } else {
@@ -147,7 +149,7 @@ void drawMonitorMode() {
 
   // Right section - Temperature graph
   gfx.setTextColor(COLOR_TEXT);
-  gfx.setCursor(250, 30);
+  gfx.setCursor(MonitorLayout::GRAPH_LABEL_X, MonitorLayout::GRAPH_LABEL_Y);
   gfx.print("TEMP HISTORY");
 
   if (cfg.show_temp_graph) {
@@ -157,12 +159,12 @@ void drawMonitorMode() {
     } else {
       sprintf(graphLabel, "(%d sec)", cfg.graph_timespan_seconds);
     }
-    gfx.setCursor(250, 40);
+    gfx.setCursor(MonitorLayout::GRAPH_LABEL_X, MonitorLayout::GRAPH_TIMESPAN_Y);
     gfx.setTextColor(COLOR_LINE);
     gfx.print(graphLabel);
 
     // Draw the temperature history graph
-    drawTempGraph(250, 55, 220, 110);
+    drawTempGraph(MonitorLayout::GRAPH_X, MonitorLayout::GRAPH_Y, MonitorLayout::GRAPH_WIDTH, MonitorLayout::GRAPH_HEIGHT);
   }
 }
 
@@ -178,52 +180,58 @@ void updateMonitorMode() {
   } else {
     sprintf(buffer, "No RTC");
   }
-  gfx.fillRect(270, 0, 210, 25, COLOR_HEADER);
-  gfx.setTextSize(2);
+  gfx.fillRect(MonitorLayout::DATETIME_X, 0, MonitorLayout::DATETIME_WIDTH, CommonLayout::HEADER_HEIGHT, COLOR_HEADER);
+  gfx.setTextSize(MonitorLayout::HEADER_FONT_SIZE);
   gfx.setTextColor(COLOR_TEXT);
-  gfx.setCursor(270, 6);
+  gfx.setCursor(MonitorLayout::DATETIME_X, MonitorLayout::DATETIME_Y);
   gfx.print(buffer);
 
   // Update temperature values and peaks
   for (int i = 0; i < 4; i++) {
+    int rowY = MonitorLayout::TEMP_START_Y + i * MonitorLayout::TEMP_ROW_SPACING;
+
     // Clear the temperature display area for this driver
-    gfx.fillRect(50, 47 + i * 30, 180, 20, COLOR_BG);
+    gfx.fillRect(MonitorLayout::TEMP_VALUE_X, rowY + MonitorLayout::TEMP_VALUE_Y_OFFSET,
+                 MonitorLayout::TEMP_VALUE_WIDTH, MonitorLayout::TEMP_VALUE_HEIGHT, COLOR_BG);
 
     // Current temp
-    gfx.setTextSize(2);
+    gfx.setTextSize(MonitorLayout::TEMP_VALUE_FONT_SIZE);
     gfx.setTextColor(sensors.temperatures[i] > cfg.temp_threshold_high ? COLOR_WARN : COLOR_VALUE);
-    gfx.setCursor(50, 47 + i * 30);
+    gfx.setCursor(MonitorLayout::TEMP_VALUE_X, rowY + MonitorLayout::TEMP_VALUE_Y_OFFSET);
     sprintf(buffer, "%d%s", (int)sensors.temperatures[i], cfg.use_fahrenheit ? "F" : "C");
     gfx.print(buffer);
 
     // Peak temp
-    gfx.setTextSize(1);
+    gfx.setTextSize(MonitorLayout::PEAK_TEMP_FONT_SIZE);
     gfx.setTextColor(COLOR_LINE);
-    gfx.setCursor(140, 52 + i * 30);
+    gfx.setCursor(MonitorLayout::PEAK_TEMP_X, rowY + MonitorLayout::PEAK_TEMP_Y_OFFSET);
     sprintf(buffer, "pk:%d%s", (int)sensors.peakTemps[i], cfg.use_fahrenheit ? "F" : "C");
     gfx.print(buffer);
   }
 
   // Update status section
-  gfx.setTextSize(1);
+  gfx.setTextSize(MonitorLayout::STATUS_LABEL_FONT_SIZE);
 
   // Fan
-  gfx.fillRect(10, 200, 220, 10, COLOR_BG);
+  gfx.fillRect(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_FAN_Y,
+               MonitorLayout::STATUS_VALUE_WIDTH, MonitorLayout::STATUS_VALUE_HEIGHT, COLOR_BG);
   gfx.setTextColor(COLOR_LINE);
-  gfx.setCursor(10, 200);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_FAN_Y);
   sprintf(buffer, "Fan: %d%% (%dRPM)", sensors.fanSpeed, sensors.fanRPM);
   gfx.print(buffer);
 
   // PSU
-  gfx.fillRect(10, 215, 220, 10, COLOR_BG);
-  gfx.setCursor(10, 215);
+  gfx.fillRect(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_PSU_Y,
+               MonitorLayout::STATUS_VALUE_WIDTH, MonitorLayout::STATUS_VALUE_HEIGHT, COLOR_BG);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_PSU_Y);
   gfx.setTextColor(COLOR_LINE);
   sprintf(buffer, "PSU: %.1fV", sensors.psuVoltage);
   gfx.print(buffer);
 
   // FluidNC Status
-  gfx.fillRect(10, 230, 220, 10, COLOR_BG);
-  gfx.setCursor(10, 230);
+  gfx.fillRect(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_FLUIDNC_Y,
+               MonitorLayout::STATUS_VALUE_WIDTH, MonitorLayout::STATUS_VALUE_HEIGHT, COLOR_BG);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_FLUIDNC_Y);
   if (fluidnc.connected) {
     if (fluidnc.machineState == "RUN") gfx.setTextColor(COLOR_GOOD);
     else if (fluidnc.machineState == "ALARM") gfx.setTextColor(COLOR_WARN);
@@ -236,9 +244,10 @@ void updateMonitorMode() {
   gfx.print(buffer);
 
   // WCS Coordinates
-  gfx.fillRect(10, 250, 220, 10, COLOR_BG);
+  gfx.fillRect(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_COORDS_WCS_Y,
+               MonitorLayout::STATUS_VALUE_WIDTH, MonitorLayout::STATUS_VALUE_HEIGHT, COLOR_BG);
   gfx.setTextColor(COLOR_TEXT);
-  gfx.setCursor(10, 250);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_COORDS_WCS_Y);
   if (cfg.coord_decimal_places == 3) {
     sprintf(buffer, "WCS: X:%.3f Y:%.3f Z:%.3f", fluidnc.wposX, fluidnc.wposY, fluidnc.wposZ);
   } else {
@@ -247,8 +256,9 @@ void updateMonitorMode() {
   gfx.print(buffer);
 
   // MCS Coordinates
-  gfx.fillRect(10, 265, 220, 10, COLOR_BG);
-  gfx.setCursor(10, 265);
+  gfx.fillRect(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_COORDS_MCS_Y,
+               MonitorLayout::STATUS_VALUE_WIDTH, MonitorLayout::STATUS_VALUE_HEIGHT, COLOR_BG);
+  gfx.setCursor(MonitorLayout::STATUS_LABEL_X, MonitorLayout::STATUS_COORDS_MCS_Y);
   if (cfg.coord_decimal_places == 3) {
     sprintf(buffer, "MCS: X:%.3f Y:%.3f Z:%.3f", fluidnc.posX, fluidnc.posY, fluidnc.posZ);
   } else {
@@ -258,6 +268,6 @@ void updateMonitorMode() {
 
   // Update temperature graph (if enabled)
   if (cfg.show_temp_graph) {
-    drawTempGraph(250, 55, 220, 110);
+    drawTempGraph(MonitorLayout::GRAPH_X, MonitorLayout::GRAPH_Y, MonitorLayout::GRAPH_WIDTH, MonitorLayout::GRAPH_HEIGHT);
   }
 }
