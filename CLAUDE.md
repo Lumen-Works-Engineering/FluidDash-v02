@@ -295,7 +295,6 @@ bool fluidncConnectionAttempted = false;  // true if FluidNC connection initiate
 FluidDash-v02/
 ├── platformio.ini                 # PlatformIO build configuration
 ├── CLAUDE.md                      # This file - AI assistant guide (single source of truth)
-├── SENSOR_MANAGEMENT_IMPLEMENTATION.md  # Sensor system implementation plan
 │
 ├── docs/                          # Documentation
 │   └── archive/                   # Historical planning docs (completed phases)
