@@ -1,9 +1,9 @@
 # CLAUDE.md - AI Assistant Development Guide
 
 **Project:** FluidDash v02 - ESP32 CYD Edition
-**Last Updated:** 2025-01-20
-**Version:** 0.2.003
-**Status:** All Core Phases Complete - Production Ready
+**Last Updated:** 2025-01-21
+**Version:** 0.3.000
+**Status:** Touchscreen + Data Logging Complete - Production Ready
 
 ---
 
@@ -56,7 +56,12 @@
   - Graph: Temperature history visualization
   - Alignment: Axis position view (when FluidNC connected)
   - Network: WiFi/connection diagnostics
-- **✅ Hard-coded screen layouts** (reliable, no JSON parsing overhead)
+- **✅ Resistive touchscreen support** (XPT2046)
+  - Tap bottom of screen → Cycle display modes
+  - Hold top of screen (5s) → Enter WiFi setup mode
+  - Visual progress bar during hold
+  - Physical button backup (redundancy)
+- **✅ Hard-coded screen layouts** with centralized constants (150+ layout values)
 - **✅ Dual storage system** (SD card + LittleFS fallback)
 - **✅ RTC support** for time/date display (DS3231)
 
@@ -74,12 +79,19 @@
   - Real-time CNC monitoring via WebSocket
   - Machine position display
   - Job status tracking
+- **📊 Data logging to SD card** (disabled by default)
+  - CSV format with RTC timestamps
+  - 10-second default interval (configurable 1s-10min)
+  - Automatic 10MB file rotation
+  - Date-based filenames (fluiddash_YYYYMMDD.csv)
+  - Web API for remote control and download
 
 ### Hardware Platform
 
 **Target Device:** ESP32-2432S028 (CYD)
 - **MCU:** Dual-core ESP32 @ 240MHz (4MB flash)
 - **Display:** 480×320 IPS LCD (ST7796 controller, SPI interface)
+- **Touchscreen:** XPT2046 resistive touch controller (shared SPI bus)
 - **Storage:** SD card slot (VSPI) + embedded LittleFS
 - **Peripherals:** 4× DS18B20 temp sensors, DS3231 RTC, fan controller, RGB LED
 
@@ -2165,6 +2177,147 @@ This is a personal project. When contributing code:
 
 ---
 
+## Recent Updates (2025-01-21)
+
+### Touchscreen Support + Data Logging Complete ✅
+
+**Status:** v0.3.000 - All three enhancement phases complete and tested on hardware
+
+Three major feature additions have been successfully implemented, tested, and merged into `main`:
+
+### Phase 1: Layout Refactoring ✅
+
+**Goal:** Make screen layouts easier to edit by centralizing hard-coded positions, font sizes, and spacing values.
+
+**Implementation:**
+- Created `src/display/ui_layout.h` with 150+ centralized constants
+- Organized into namespaces: `MonitorLayout`, `AlignmentLayout`, `GraphLayout`, `NetworkLayout`
+- Refactored all 4 UI files (`ui_monitor.cpp`, `ui_alignment.cpp`, `ui_graph.cpp`, `ui_network.cpp`)
+- Changed from scattered magic numbers to centralized, easily editable values
+
+**Example:**
+```cpp
+// Before: Magic numbers scattered throughout code
+gfx.setCursor(10, 50);
+gfx.setTextSize(2);
+
+// After: Centralized constants
+gfx.setCursor(MonitorLayout::TEMP_LABEL_X, MonitorLayout::TEMP_START_Y);
+gfx.setTextSize(MonitorLayout::TEMP_LABEL_FONT_SIZE);
+```
+
+**Benefits:**
+- Easy editing: Change layout by modifying constants in one file
+- Consistency: All screens use organized constant sets
+- Maintainability: Clear intent and easy to understand
+
+### Phase 2: Touchscreen Support ✅
+
+**Goal:** Enable XPT2046 resistive touchscreen for basic navigation without requiring the physical button.
+
+**Implementation:**
+- Initialized XPT2046 touch controller in `display.h/cpp`
+- Proper calibration values (X: 300-3900, Y: 62000-65500 raw ADC)
+- Created `src/input/touch_handler.h/cpp` with touch zone detection
+- **Safety mechanism:** 5-second hold requirement for WiFi setup (prevents accidental activation)
+
+**Touch Zones:**
+- **Bottom of screen (Y > 280):** Tap to cycle display modes (instant, 300ms debounce)
+- **Top of screen (Y < 25):** Hold for 5 seconds to enter WiFi setup mode
+  - Visual progress bar (0-100%) with cyan fill and percentage display
+  - Automatically cancels if touch is released or moved
+- **Middle zone:** No action (safe zone)
+
+**Features:**
+- Debouncing: 300ms for footer tap to prevent double-activation
+- Progress bar: Visual feedback during 5-second hold
+- Cancellation: Releases hold if finger moves or lifts
+- Redundancy: Physical button still works (backup input method)
+
+**Serial Debug Output:**
+```
+[TOUCH] Header hold started - hold for 5s to enter WiFi setup
+[TOUCH] Header hold complete - entering setup mode
+[TOUCH] Footer zone tapped - cycling mode
+```
+
+### Phase 3: Data Logging ✅
+
+**Goal:** Implement CSV data logging to SD card for historical sensor tracking.
+
+**Implementation:**
+- Created `src/logging/data_logger.h/cpp` with DataLogger class
+- RTC-based timestamps and filenames
+- Automatic file rotation at 10MB
+- Web API endpoints for remote control
+
+**CSV Format:**
+```csv
+Timestamp,TempX,TempYL,TempYR,TempZ,PSU_Voltage,Fan_RPM,Fan_Speed,Machine_State,Pos_X,Pos_Y,Pos_Z
+2025-01-21 15:12:00,26.3,26.4,26.2,26.4,13.52,0,30,IDLE,0,0,0
+```
+
+**Features:**
+- **Filename:** `/logs/fluiddash_YYYYMMDD.csv` (daily files)
+- **Interval:** 10 seconds default (configurable 1s-10min)
+- **Timestamps:** RTC-based (`2025-01-21 15:12:00`) or uptime fallback
+- **Rotation:** Automatic 10MB file size limit
+- **Headers:** Automatically written for new files
+- **Disabled by default** to preserve SD card lifespan
+
+**Web API Endpoints:**
+```
+POST /api/logs/enable     - Enable/disable logging + set interval
+GET  /api/logs/status     - Current logging status
+GET  /api/logs/list       - List all CSV log files
+GET  /api/logs/download   - Download specific log file
+DELETE /api/logs/clear    - Delete all log files
+```
+
+**Example Usage:**
+```javascript
+// Enable logging with 10-second interval
+fetch('/api/logs/enable', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({enabled: true, interval: 10000})
+});
+
+// Download log file
+window.open('/api/logs/download?file=fluiddash_20250121.csv');
+```
+
+### Hardware Testing Confirmation
+
+All three phases tested on ESP32-2432S028 hardware:
+- ✅ Touchscreen calibration correct (zones work as expected)
+- ✅ 5-second hold safety mechanism prevents accidental WiFi setup
+- ✅ Progress bar displays correctly during hold
+- ✅ CSV logging creates proper files with headers and RTC timestamps
+- ✅ Physical button still works (redundancy maintained)
+- ✅ No performance degradation or UI lag
+- ✅ Non-blocking operation throughout
+
+### Files Added/Modified
+
+**New Files (6):**
+- `src/display/ui_layout.h` - 150+ centralized layout constants
+- `src/input/touch_handler.h` - Touch input declarations
+- `src/input/touch_handler.cpp` - Touch zone detection and progress bar
+- `src/logging/data_logger.h` - DataLogger class
+- `src/logging/data_logger.cpp` - CSV logging implementation
+
+**Modified Files (5):**
+- `src/display/display.cpp` - XPT2046 touch calibration
+- `src/display/ui_*.cpp` - Layout constant refactoring (4 files)
+- `src/main.cpp` - Touch handler integration, logger initialization
+- `src/web/web_handlers.h` - Logging API declarations
+- `src/web/web_handlers.cpp` - Logging API endpoints
+
+**Total:** 10 commits, ~15 files changed
+
+---
+
 ## Recent Updates (2025-11-19)
 
 ### Architecture Refactoring Complete ✅
@@ -2194,26 +2347,33 @@ src/
 │   ├── config.h/cpp          # Configuration management
 │   └── pins.h                # Hardware pin definitions
 ├── display/
-│   ├── display.h/cpp         # Display initialization
+│   ├── display.h/cpp         # Display + touchscreen initialization
+│   ├── ui_layout.h           # ⭐ Centralized layout constants (150+ values)
 │   ├── ui_modes.h            # UI mode declarations
 │   ├── ui_monitor.cpp        # Monitor screen
 │   ├── ui_alignment.cpp      # Alignment screen
 │   ├── ui_graph.cpp          # Graph screen
 │   ├── ui_network.cpp        # Network status screen
 │   └── ui_common.cpp         # Shared UI functions
+├── input/
+│   ├── touch_handler.h       # ⭐ NEW: Touchscreen input handling
+│   └── touch_handler.cpp     # ⭐ NEW: Touch zones, hold detection, progress bar
+├── logging/
+│   ├── data_logger.h         # ⭐ NEW: CSV data logger
+│   └── data_logger.cpp       # ⭐ NEW: RTC timestamps, file rotation
 ├── network/
 │   ├── network.h/cpp         # WiFi & WebSocket (100% complete)
 │   └── [handleWebSocketLoop] # WebSocket loop extracted here
 ├── sensors/
 │   └── sensors.h/cpp         # Temperature, PSU, fan control
 ├── state/
-│   ├── global_state.h        # ⭐ NEW: Structured state definitions
-│   └── global_state.cpp      # ⭐ NEW: State initialization
+│   ├── global_state.h        # Structured state definitions
+│   └── global_state.cpp      # State initialization
 ├── utils/
 │   └── utils.h/cpp           # Utility functions
 └── web/
-    ├── web_handlers.h        # ⭐ NEW: Web handler declarations
-    ├── web_handlers.cpp      # ⭐ NEW: All web handlers (813 lines)
+    ├── web_handlers.h        # Web handler declarations
+    ├── web_handlers.cpp      # All web handlers (813 lines + logging APIs)
     └── web_utils.h           # HTTP utilities & ETag caching
 ```
 
