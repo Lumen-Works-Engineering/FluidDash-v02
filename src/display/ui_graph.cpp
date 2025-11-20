@@ -1,4 +1,5 @@
 #include "ui_modes.h"
+#include "ui_layout.h"
 #include "state/global_state.h"
 #include "display.h"
 #include "config/config.h"
@@ -13,10 +14,10 @@ void drawGraphMode() {
   gfx.fillScreen(COLOR_BG);
 
   // Header
-  gfx.fillRect(0, 0, SCREEN_WIDTH, 25, COLOR_HEADER);
+  gfx.fillRect(0, 0, SCREEN_WIDTH, CommonLayout::HEADER_HEIGHT, COLOR_HEADER);
   gfx.setTextColor(COLOR_TEXT);
-  gfx.setTextSize(2);
-  gfx.setCursor(100, 6);
+  gfx.setTextSize(GraphLayout::TITLE_FONT_SIZE);
+  gfx.setCursor(GraphLayout::TITLE_X, GraphLayout::TITLE_Y);
   gfx.print("TEMPERATURE HISTORY");
 
   char timeLabel[40];
@@ -25,18 +26,17 @@ void drawGraphMode() {
   } else {
     sprintf(timeLabel, " - %d seconds", cfg.graph_timespan_seconds);
   }
-  gfx.setTextSize(1);
-  gfx.setCursor(330, 10);
+  gfx.setTextSize(GraphLayout::TIMESPAN_LABEL_FONT_SIZE);
+  gfx.setCursor(GraphLayout::TIMESPAN_LABEL_X, GraphLayout::TIMESPAN_LABEL_Y);
   gfx.print(timeLabel);
 
-  gfx.drawFastHLine(0, 25, SCREEN_WIDTH, COLOR_LINE);
+  gfx.drawFastHLine(0, CommonLayout::HEADER_HEIGHT, SCREEN_WIDTH, COLOR_LINE);
 
   // Full screen graph
-  drawTempGraph(20, 40, 440, 270);
+  drawTempGraph(GraphLayout::GRAPH_X, GraphLayout::GRAPH_Y, GraphLayout::GRAPH_WIDTH, GraphLayout::GRAPH_HEIGHT);
 }
 
 void updateGraphMode() {
   // Redraw graph
-  drawTempGraph(20, 40, 440, 270);
+  drawTempGraph(GraphLayout::GRAPH_X, GraphLayout::GRAPH_Y, GraphLayout::GRAPH_WIDTH, GraphLayout::GRAPH_HEIGHT);
 }
-
