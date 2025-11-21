@@ -11,7 +11,13 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git stash:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(for branch in \"claude/sensor-naming-interface-0126MctK9SsLrMvzqQViDp5p\" \"claude/archive-cleanup-012rmcmADvHuaNhdDm9oePtK\" \"claude/setup-local-branch-012rmcmADvHuaNhdDm9oePtK\" \"claude/claude-md-mhzdss8idgpqrjlf-01DLKhNtvYbXckbVfLBRStQ5\")",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(git branch:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []
