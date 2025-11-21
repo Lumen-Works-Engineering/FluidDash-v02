@@ -75,8 +75,8 @@ void handleTouchInput() {
 }
 
 void cycleModeForward() {
-    // Cycle through 4 display modes: Monitor -> Alignment -> Graph -> Network -> Monitor
-    currentMode = (DisplayMode)((currentMode + 1) % 4);
+    // Cycle through 5 display modes: Monitor -> Alignment -> Graph -> Network -> Storage -> Monitor
+    currentMode = (DisplayMode)((currentMode + 1) % 5);
 }
 
 void drawProgressBar(int progress) {

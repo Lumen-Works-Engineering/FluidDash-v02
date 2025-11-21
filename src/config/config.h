@@ -8,7 +8,8 @@ enum DisplayMode {
   MODE_MONITOR,
   MODE_ALIGNMENT,
   MODE_GRAPH,
-  MODE_NETWORK
+  MODE_NETWORK,
+  MODE_STORAGE
 };
 
 // Element types for JSON-defined screens

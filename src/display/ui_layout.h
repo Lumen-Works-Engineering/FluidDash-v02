@@ -181,4 +181,62 @@ namespace NetworkLayout {
     constexpr int INSTRUCTIONS_FONT_SIZE = 1;
 }
 
+// Storage mode layout constants
+namespace StorageLayout {
+    // Header
+    constexpr int HEADER_X = 10;
+    constexpr int HEADER_Y = 10;
+    constexpr int HEADER_FONT_SIZE = 2;
+
+    // SD Card section
+    constexpr int SD_LABEL_X = 10;
+    constexpr int SD_LABEL_Y = 45;
+    constexpr int SD_STATUS_X = 120;
+    constexpr int SD_STATUS_Y = 45;
+    constexpr int SD_SPACE_X = 10;
+    constexpr int SD_SPACE_Y = 65;
+
+    // SPIFFS section
+    constexpr int SPIFFS_LABEL_X = 10;
+    constexpr int SPIFFS_LABEL_Y = 90;
+    constexpr int SPIFFS_STATUS_X = 120;
+    constexpr int SPIFFS_STATUS_Y = 90;
+    constexpr int SPIFFS_SPACE_X = 10;
+    constexpr int SPIFFS_SPACE_Y = 110;
+
+    // Divider line
+    constexpr int DIVIDER_Y = 135;
+    constexpr int DIVIDER_X1 = 10;
+    constexpr int DIVIDER_X2 = 470;
+
+    // Logging section
+    constexpr int LOG_TITLE_X = 10;
+    constexpr int LOG_TITLE_Y = 145;
+    constexpr int LOG_TITLE_FONT_SIZE = 2;
+
+    constexpr int LOG_STATUS_LABEL_X = 10;
+    constexpr int LOG_STATUS_LABEL_Y = 175;
+    constexpr int LOG_STATUS_VALUE_X = 150;
+    constexpr int LOG_STATUS_VALUE_Y = 175;
+
+    constexpr int LOG_INTERVAL_LABEL_X = 10;
+    constexpr int LOG_INTERVAL_LABEL_Y = 195;
+    constexpr int LOG_INTERVAL_VALUE_X = 150;
+    constexpr int LOG_INTERVAL_VALUE_Y = 195;
+
+    constexpr int LOG_FILE_LABEL_X = 10;
+    constexpr int LOG_FILE_LABEL_Y = 215;
+    constexpr int LOG_FILE_NAME_X = 20;
+    constexpr int LOG_FILE_NAME_Y = 235;
+    constexpr int LOG_FILE_SIZE_X = 20;
+    constexpr int LOG_FILE_SIZE_Y = 255;
+
+    constexpr int LOG_COUNT_X = 10;
+    constexpr int LOG_COUNT_Y = 280;
+
+    // Font sizes
+    constexpr int SECTION_FONT_SIZE = 1;
+    constexpr int VALUE_FONT_SIZE = 1;
+}
+
 #endif // UI_LAYOUT_H
