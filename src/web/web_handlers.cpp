@@ -24,11 +24,19 @@ void handleRoot() {
 }
 
 void handleSettings() {
-  sendHTMLWithETag(server, "text/html", getSettingsHTML());
+  // Disable caching for settings page since values change based on config
+  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  server.sendHeader("Pragma", "no-cache");
+  server.sendHeader("Expires", "0");
+  server.send(200, "text/html", getSettingsHTML());
 }
 
 void handleAdmin() {
-  sendHTMLWithETag(server, "text/html", getAdminHTML());
+  // Disable caching for admin page since values change based on config
+  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  server.sendHeader("Pragma", "no-cache");
+  server.sendHeader("Expires", "0");
+  server.send(200, "text/html", getAdminHTML());
 }
 
 void handleWiFi() {
