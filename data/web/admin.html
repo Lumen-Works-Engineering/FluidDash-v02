@@ -79,9 +79,10 @@
       fetch('/api/status')
         .then(r => r.json())
         .then(data => {
+          let unit = data.temp_unit || 'C';
           let html = '';
           ['X', 'YL', 'YR', 'Z'].forEach((name, i) => {
-            html += `<div class='current-reading'>${name}: ${data.temperatures[i].toFixed(2)}°C</div>`;
+            html += `<div class='current-reading'>${name}: ${data.temperatures[i].toFixed(2)}°${unit}</div>`;
           });
           html += `<div class='current-reading'>PSU: ${data.psu_voltage.toFixed(2)}V</div>`;
           document.getElementById('readings').innerHTML = html;

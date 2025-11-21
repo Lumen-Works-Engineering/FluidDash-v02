@@ -903,11 +903,16 @@ String getStatusJSON() {
   doc["wifi_rssi"] = WiFi.RSSI();
   doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
 
-  // Temperatures
+  // Temperatures (convert based on user preference)
   JsonArray temps = doc["temperatures"].to<JsonArray>();
   for (int i = 0; i < 4; i++) {
-    temps.add(sensors.temperatures[i]);
+    float temp = sensors.temperatures[i];
+    if (cfg.use_fahrenheit) {
+      temp = (temp * 9.0 / 5.0) + 32.0;
+    }
+    temps.add(temp);
   }
+  doc["temp_unit"] = cfg.use_fahrenheit ? "F" : "C";
 
   // PSU
   doc["psu_voltage"] = sensors.psuVoltage;
