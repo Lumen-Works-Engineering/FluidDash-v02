@@ -14,42 +14,6 @@ bool layoutsLoaded = false;
 // Preferences object - extern (defined in main.cpp)
 extern Preferences prefs;
 
-void initDefaultConfig() {
-  strcpy(cfg.device_name, "fluiddash");
-  strcpy(cfg.fluidnc_ip, "192.168.73.13");
-  cfg.fluidnc_port = 81;  // FluidNC WebSocket default port
-  cfg.fluidnc_auto_discover = false;  // Disabled - device runs standalone by default
-
-  cfg.temp_threshold_low = 30.0;
-  cfg.temp_threshold_high = 50.0;
-
-  cfg.temp_offset_x = 0.0;
-  cfg.temp_offset_yl = 0.0;
-  cfg.temp_offset_yr = 0.0;
-  cfg.temp_offset_z = 0.0;
-  cfg.fan_min_speed = 30;
-  cfg.fan_max_speed_limit = 100;
-
-  cfg.psu_voltage_cal = 7.3;
-  cfg.psu_alert_low = 23.0;
-  cfg.psu_alert_high = 25.0;
-
-  cfg.brightness = 255;
-  cfg.default_mode = MODE_MONITOR;
-  cfg.show_machine_coords = true;
-  cfg.show_temp_graph = true;
-  cfg.coord_decimal_places = 2;
-
-  cfg.graph_timespan_seconds = 300;  // 5 minutes default
-  cfg.graph_update_interval = 5;      // 5 seconds per point
-
-  cfg.use_fahrenheit = true;
-  cfg.use_inches = false;
-
-  cfg.enable_logging = false;
-  cfg.status_update_rate = 200;
-}
-
 void loadConfig() {
   prefs.begin("fluiddash", true);
 

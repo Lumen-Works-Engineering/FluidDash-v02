@@ -50,8 +50,6 @@ void setup() {
   
   // Initialize global state
   initGlobalState();
-  // Initialize default configuration
-  initDefaultConfig();
 
   // Enable watchdog timer (10 seconds)
   enableLoopWDT();

@@ -115,7 +115,6 @@ extern ScreenLayout networkLayout;
 extern bool layoutsLoaded;
 
 // Function declarations
-void initDefaultConfig();
 void loadConfig();
 void saveConfig();
 
