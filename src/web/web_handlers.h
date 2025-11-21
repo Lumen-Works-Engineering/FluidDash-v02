@@ -11,6 +11,7 @@ void handleAdmin();
 void handleWiFi();
 void handleSensors();
 void handleDriverSetup();
+void handleLogs();
 
 // API handlers
 void handleAPIConfig();

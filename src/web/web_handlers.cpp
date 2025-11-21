@@ -59,6 +59,18 @@ void handleDriverSetup() {
   sendHTMLWithETag(server, "text/html", html);
 }
 
+void handleLogs() {
+  // Load data logging page from filesystem
+  String html = storage.loadFile("/web/logs.html");
+
+  if (html.length() == 0) {
+    Serial.println("[Web] ERROR: Failed to load logs.html");
+    html = "<html><body><h1>Error: logs.html not found</h1></body></html>";
+  }
+
+  sendHTMLWithETag(server, "text/html", html);
+}
+
 void handleAPIConfig() {
   sendHTMLWithETag(server, "application/json", getConfigJSON());
 }
@@ -665,6 +677,7 @@ void setupWebServer() {
   server.on("/wifi", HTTP_GET, handleWiFi);
   server.on("/sensors", HTTP_GET, handleSensors);
   server.on("/driver_setup", HTTP_GET, handleDriverSetup);
+  server.on("/logs", HTTP_GET, handleLogs);
   server.on("/api/config", HTTP_GET, handleAPIConfig);
   server.on("/api/status", HTTP_GET, handleAPIStatus);
   server.on("/api/save", HTTP_POST, handleAPISave);
