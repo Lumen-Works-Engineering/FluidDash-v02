@@ -45,10 +45,10 @@ void loadConfig() {
   cfg.graph_timespan_seconds = prefs.getUShort("graph_time", 300);
   cfg.graph_update_interval = prefs.getUShort("graph_int", 5);
 
-  cfg.use_fahrenheit = prefs.getBool("use_f", false);
+  cfg.use_fahrenheit = prefs.getBool("use_f", true);
   cfg.use_inches = prefs.getBool("use_in", false);
 
-  cfg.enable_logging = prefs.getBool("logging", false);
+  cfg.enable_logging = prefs.getBool("logging", true);
   cfg.status_update_rate = prefs.getUShort("status_rate", 200);
 
   prefs.end();
