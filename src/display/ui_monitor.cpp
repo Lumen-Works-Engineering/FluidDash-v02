@@ -15,6 +15,11 @@ extern RTC_DS3231 rtc;
 // Function prototype from main.cpp
 const char* getMonthName(int month);
 
+// Helper function to convert temperature based on user preference
+inline float convertTemp(float celsius) {
+  return cfg.use_fahrenheit ? ((celsius * 9.0 / 5.0) + 32.0) : celsius;
+}
+
 // ========== MONITOR MODE ==========
 
 void drawMonitorMode() {
@@ -194,18 +199,18 @@ void updateMonitorMode() {
     gfx.fillRect(MonitorLayout::TEMP_VALUE_X, rowY + MonitorLayout::TEMP_VALUE_Y_OFFSET,
                  MonitorLayout::TEMP_VALUE_WIDTH, MonitorLayout::TEMP_VALUE_HEIGHT, COLOR_BG);
 
-    // Current temp
+    // Current temp (convert to user's preferred unit)
     gfx.setTextSize(MonitorLayout::TEMP_VALUE_FONT_SIZE);
     gfx.setTextColor(sensors.temperatures[i] > cfg.temp_threshold_high ? COLOR_WARN : COLOR_VALUE);
     gfx.setCursor(MonitorLayout::TEMP_VALUE_X, rowY + MonitorLayout::TEMP_VALUE_Y_OFFSET);
-    sprintf(buffer, "%d%s", (int)sensors.temperatures[i], cfg.use_fahrenheit ? "F" : "C");
+    sprintf(buffer, "%d%s", (int)convertTemp(sensors.temperatures[i]), cfg.use_fahrenheit ? "F" : "C");
     gfx.print(buffer);
 
-    // Peak temp
+    // Peak temp (convert to user's preferred unit)
     gfx.setTextSize(MonitorLayout::PEAK_TEMP_FONT_SIZE);
     gfx.setTextColor(COLOR_LINE);
     gfx.setCursor(MonitorLayout::PEAK_TEMP_X, rowY + MonitorLayout::PEAK_TEMP_Y_OFFSET);
-    sprintf(buffer, "pk:%d%s", (int)sensors.peakTemps[i], cfg.use_fahrenheit ? "F" : "C");
+    sprintf(buffer, "pk:%d%s", (int)convertTemp(sensors.peakTemps[i]), cfg.use_fahrenheit ? "F" : "C");
     gfx.print(buffer);
   }
 

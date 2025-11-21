@@ -30,12 +30,21 @@
 
     <form id='settingsForm'>
       <div class='card'>
-        <h2>Temperature Control</h2>
-        <label>Low Threshold (°C) - Fan starts ramping up</label>
-        <input type='number' name='temp_low' value='%TEMP_LOW%' step='0.5' min='20' max='50'>
+        <h2>Temperature Units</h2>
+        <label>Temperature Display Unit</label>
+        <select name='use_fahrenheit' id='tempUnit' onchange='convertTemperatures()'>
+          <option value='0' %USE_CELSIUS%>Celsius (°C)</option>
+          <option value='1' %USE_FAHRENHEIT%>Fahrenheit (°F)</option>
+        </select>
+      </div>
 
-        <label>High Threshold (°C) - Fan at 100%</label>
-        <input type='number' name='temp_high' value='%TEMP_HIGH%' step='0.5' min='30' max='80'>
+      <div class='card'>
+        <h2>Temperature Control</h2>
+        <label id='tempLowLabel'>Low Threshold (°C) - Fan starts ramping up</label>
+        <input type='number' name='temp_low' id='tempLow' value='%TEMP_LOW%' step='0.5' min='20' max='50'>
+
+        <label id='tempHighLabel'>High Threshold (°C) - Fan at 100%</label>
+        <input type='number' name='temp_high' id='tempHigh' value='%TEMP_HIGH%' step='0.5' min='30' max='80'>
       </div>
 
       <div class='card'>
@@ -114,10 +123,70 @@
   </div>
 
   <script>
+    let currentUnit = 'C'; // Track current unit state
+
+    function convertTemperatures() {
+      const unit = document.getElementById('tempUnit').value;
+      const newUnit = (unit === '1') ? 'F' : 'C';
+
+      // Only convert if unit actually changed
+      if (newUnit === currentUnit) return;
+
+      const tempLow = document.getElementById('tempLow');
+      const tempHigh = document.getElementById('tempHigh');
+      const tempLowLabel = document.getElementById('tempLowLabel');
+      const tempHighLabel = document.getElementById('tempHighLabel');
+
+      // Convert values
+      if (newUnit === 'F') {
+        // C to F: (C × 9/5) + 32
+        tempLow.value = ((parseFloat(tempLow.value) * 9/5) + 32).toFixed(1);
+        tempHigh.value = ((parseFloat(tempHigh.value) * 9/5) + 32).toFixed(1);
+        tempLow.min = 68;  // 20°C
+        tempLow.max = 122; // 50°C
+        tempHigh.min = 86;  // 30°C
+        tempHigh.max = 176; // 80°C
+        tempLowLabel.textContent = 'Low Threshold (°F) - Fan starts ramping up';
+        tempHighLabel.textContent = 'High Threshold (°F) - Fan at 100%';
+      } else {
+        // F to C: (F - 32) × 5/9
+        tempLow.value = ((parseFloat(tempLow.value) - 32) * 5/9).toFixed(1);
+        tempHigh.value = ((parseFloat(tempHigh.value) - 32) * 5/9).toFixed(1);
+        tempLow.min = 20;
+        tempLow.max = 50;
+        tempHigh.min = 30;
+        tempHigh.max = 80;
+        tempLowLabel.textContent = 'Low Threshold (°C) - Fan starts ramping up';
+        tempHighLabel.textContent = 'High Threshold (°C) - Fan at 100%';
+      }
+
+      currentUnit = newUnit;
+    }
+
+    // Initialize current unit on page load
+    window.addEventListener('load', function() {
+      const unit = document.getElementById('tempUnit').value;
+      currentUnit = (unit === '1') ? 'F' : 'C';
+
+      // If fahrenheit is selected on load, update labels
+      if (currentUnit === 'F') {
+        document.getElementById('tempLowLabel').textContent = 'Low Threshold (°F) - Fan starts ramping up';
+        document.getElementById('tempHighLabel').textContent = 'High Threshold (°F) - Fan at 100%';
+      }
+    });
+
     document.getElementById('settingsForm').addEventListener('submit', function(e) {
       e.preventDefault();
 
       let formData = new FormData(this);
+
+      // Always convert temperature values back to Celsius before saving
+      if (currentUnit === 'F') {
+        const tempLow = document.getElementById('tempLow').value;
+        const tempHigh = document.getElementById('tempHigh').value;
+        formData.set('temp_low', ((parseFloat(tempLow) - 32) * 5/9).toFixed(2));
+        formData.set('temp_high', ((parseFloat(tempHigh) - 32) * 5/9).toFixed(2));
+      }
 
       fetch('/api/save', {
         method: 'POST',

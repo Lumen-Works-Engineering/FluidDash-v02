@@ -750,9 +750,19 @@ String getSettingsHTML() {
     return "<html><body><h1>Error: settings.html not found</h1></body></html>";
   }
 
-  // Replace numeric input values
-  html.replace("%TEMP_LOW%", String(cfg.temp_threshold_low));
-  html.replace("%TEMP_HIGH%", String(cfg.temp_threshold_high));
+  // Replace temperature unit selection (always stored as Celsius in cfg)
+  html.replace("%USE_CELSIUS%", !cfg.use_fahrenheit ? "selected" : "");
+  html.replace("%USE_FAHRENHEIT%", cfg.use_fahrenheit ? "selected" : "");
+
+  // Replace numeric input values (convert to Fahrenheit if needed for display)
+  float tempLow = cfg.temp_threshold_low;
+  float tempHigh = cfg.temp_threshold_high;
+  if (cfg.use_fahrenheit) {
+    tempLow = (tempLow * 9.0 / 5.0) + 32.0;
+    tempHigh = (tempHigh * 9.0 / 5.0) + 32.0;
+  }
+  html.replace("%TEMP_LOW%", String(tempLow, 1));
+  html.replace("%TEMP_HIGH%", String(tempHigh, 1));
   html.replace("%FAN_MIN%", String(cfg.fan_min_speed));
   html.replace("%PSU_LOW%", String(cfg.psu_alert_low));
   html.replace("%PSU_HIGH%", String(cfg.psu_alert_high));
@@ -791,12 +801,6 @@ String getAdminHTML() {
     Serial.println("[Web] ERROR: Failed to load admin.html");
     return "<html><body><h1>Error: admin.html not found</h1></body></html>";
   }
-
-  // Replace calibration offset values (with 2 decimal places for temp)
-  html.replace("%CAL_X%", String(cfg.temp_offset_x, 2));
-  html.replace("%CAL_YL%", String(cfg.temp_offset_yl, 2));
-  html.replace("%CAL_YR%", String(cfg.temp_offset_yr, 2));
-  html.replace("%CAL_Z%", String(cfg.temp_offset_z, 2));
 
   // Replace PSU calibration value (with 3 decimal places)
   html.replace("%PSU_CAL%", String(cfg.psu_voltage_cal, 3));

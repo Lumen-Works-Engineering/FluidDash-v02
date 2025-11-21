@@ -8,6 +8,11 @@
 // External variables from main.cpp
 extern Config cfg;
 
+// Helper function to convert temperature based on user preference
+inline float convertTemp(float celsius) {
+  return cfg.use_fahrenheit ? ((celsius * 9.0 / 5.0) + 32.0) : celsius;
+}
+
 // ========== ALIGNMENT MODE ==========
 
 void drawAlignmentMode() {
@@ -107,7 +112,11 @@ void drawAlignmentMode() {
 
   gfx.setTextColor(maxTemp > cfg.temp_threshold_high ? COLOR_WARN : COLOR_LINE);
   gfx.setCursor(AlignmentLayout::MACHINE_POS_X, 300);
-  gfx.printf("Temps:%.0fC  Fan:%d%%  PSU:%.1fV", maxTemp, sensors.fanSpeed, sensors.psuVoltage);
+  gfx.printf("Temps:%.0f%s  Fan:%d%%  PSU:%.1fV",
+             convertTemp(maxTemp),
+             cfg.use_fahrenheit ? "F" : "C",
+             sensors.fanSpeed,
+             sensors.psuVoltage);
 }
 
 void updateAlignmentMode() {
@@ -200,5 +209,9 @@ void updateAlignmentMode() {
 
   gfx.setTextColor(maxTemp > cfg.temp_threshold_high ? COLOR_WARN : COLOR_LINE);
   gfx.setCursor(90, 300);
-  gfx.printf("%.0fC  Fan:%d%%  PSU:%.1fV", maxTemp, sensors.fanSpeed, sensors.psuVoltage);
+  gfx.printf("%.0f%s  Fan:%d%%  PSU:%.1fV",
+             convertTemp(maxTemp),
+             cfg.use_fahrenheit ? "F" : "C",
+             sensors.fanSpeed,
+             sensors.psuVoltage);
 }
