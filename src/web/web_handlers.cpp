@@ -110,7 +110,9 @@ void handleAPISave() {
     cfg.coord_decimal_places = server.arg("coord_decimals").toInt();
   }
   if (server.hasArg("use_fahrenheit")) {
-    cfg.use_fahrenheit = (server.arg("use_fahrenheit").toInt() == 1);
+    int value = server.arg("use_fahrenheit").toInt();
+    cfg.use_fahrenheit = (value == 1);
+    Serial.printf("[API Save] use_fahrenheit received: %d, set to: %d\n", value, cfg.use_fahrenheit);
   }
 
   // FluidNC Integration Settings
@@ -753,7 +755,8 @@ String getSettingsHTML() {
     return "<html><body><h1>Error: settings.html not found</h1></body></html>";
   }
 
-  // Replace temperature unit selection (always stored as Celsius in cfg)
+  // Replace temperature unit selection
+  Serial.printf("[Settings] use_fahrenheit = %d\n", cfg.use_fahrenheit);
   html.replace("%USE_CELSIUS%", !cfg.use_fahrenheit ? "selected" : "");
   html.replace("%USE_FAHRENHEIT%", cfg.use_fahrenheit ? "selected" : "");
 
