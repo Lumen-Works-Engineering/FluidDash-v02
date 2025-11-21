@@ -17,7 +17,8 @@
       "Bash(echo:*)",
       "Bash(done)",
       "Bash(git branch:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(git remote prune:*)"
     ],
     "deny": [],
     "ask": []
