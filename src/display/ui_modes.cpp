@@ -22,6 +22,9 @@ void drawScreen() {
         case MODE_NETWORK:
             drawNetworkMode();
             break;
+        case MODE_STORAGE:
+            drawStorageMode();
+            break;
     }
 }
 
@@ -38,6 +41,9 @@ void updateDisplay() {
             break;
         case MODE_NETWORK:
             updateNetworkMode();
+            break;
+        case MODE_STORAGE:
+            updateStorageMode();
             break;
     }
 }

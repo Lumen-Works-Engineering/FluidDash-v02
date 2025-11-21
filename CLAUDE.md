@@ -1,9 +1,9 @@
 # CLAUDE.md - AI Assistant Development Guide
 
 **Project:** FluidDash v02 - ESP32 CYD Edition
-**Last Updated:** 2025-01-21
-**Version:** 0.3.000
-**Status:** Touchscreen + Data Logging Complete - Production Ready
+**Last Updated:** 2025-01-22
+**Version:** 0.3.100
+**Status:** Production Ready - Full Feature Set Complete
 
 ---
 
@@ -51,11 +51,12 @@
   - Automatic speed adjustment based on temperature
   - Configurable minimum speed
   - RPM monitoring
-- **✅ 480×320 IPS LCD display** with 4 viewing modes:
+- **✅ 480×320 IPS LCD display** with 5 viewing modes:
   - Monitor: Temperature/PSU/Fan status
   - Graph: Temperature history visualization
   - Alignment: Axis position view (when FluidNC connected)
   - Network: WiFi/connection diagnostics
+  - Storage: SD card/SPIFFS/logging status
 - **✅ Resistive touchscreen support** (XPT2046)
   - Tap bottom of screen → Cycle display modes
   - Hold top of screen (5s) → Enter WiFi setup mode
@@ -2315,6 +2316,207 @@ All three phases tested on ESP32-2432S028 hardware:
 - `src/web/web_handlers.cpp` - Logging API endpoints
 
 **Total:** 10 commits, ~15 files changed
+
+---
+
+## Recent Updates (2025-01-22)
+
+### Production Enhancements Complete ✅
+
+**Status:** v0.3.100 - All user-requested features implemented and tested
+
+This session focused on production quality improvements, best practices implementation, and user experience enhancements.
+
+### Key Features Added
+
+#### 1. Temperature Unit Selection (Celsius/Fahrenheit)
+
+**Implementation:**
+- User-selectable temperature unit in Settings page
+- Real-time conversion in web interface with JavaScript
+- LCD display respects user preference
+- All temperatures stored internally as Celsius
+- Auto-conversion for display throughout system
+
+**Files Modified:**
+- `data/web/settings.html` - Added unit selector with live conversion
+- `data/web/main.html` - Temperature display with correct unit
+- `data/web/admin.html` - Current readings in user's unit
+- `src/web/web_handlers.cpp` - Status JSON includes temp_unit field
+- `src/display/ui_monitor.cpp` - convertTemp() helper function
+- `src/display/ui_alignment.cpp` - Temperature display conversion
+
+**User Experience:**
+- Change dropdown: values instantly convert (30°C ↔ 86°F)
+- Save: stores as Celsius internally
+- Reload: displays in saved preference
+- LCD and web always match
+
+#### 2. Browser Cache Management
+
+**Issue:** Settings page cached by browser, showed stale values when navigating back from main page.
+
+**Solution:** Added no-cache headers to settings and admin pages
+```cpp
+server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+server.sendHeader("Pragma", "no-cache");
+server.sendHeader("Expires", "0");
+```
+
+**Result:** Pages always show current configuration without manual refresh
+
+#### 3. FluidNC Connection Reliability (ARP Cache Fix)
+
+**Issue:** FluidNC running for days, FluidDash wouldn't connect after reboot until user opened browser to FluidNC.
+
+**Root Cause:** Network switch ARP cache didn't have FluidNC's MAC address for idle device.
+
+**Solution:** HTTP pre-connection to populate ARP cache before WebSocket attempt
+```cpp
+// Send HTTP GET to FluidNC before WebSocket
+WiFiClient client;
+if (client.connect(cfg.fluidnc_ip, 80)) {
+    // ARP cache now populated, WebSocket will succeed
+}
+```
+
+**Result:** Reliable connection on first attempt without manual intervention
+
+#### 4. Factory Reset to Defaults
+
+**Motivation:** Following embedded systems best practices for field deployment and troubleshooting.
+
+**Implementation:**
+- `resetToDefaults()` function clears entire NVS namespace
+- Web UI in admin page with prominent danger styling
+- Double confirmation dialogs prevent accidental activation
+- Lists exactly what gets deleted
+- Auto-restart after reset
+
+**User Interface:**
+- Red border and danger colors
+- Two scary confirmation dialogs
+- Clear consequences listed
+- Restarts automatically to load defaults
+
+**Use Cases:**
+- User misconfiguration recovery
+- Field support ("try factory reset first")
+- Device redeployment
+- NVS corruption recovery
+
+#### 5. Storage Mode (5th Display Mode)
+
+**Added:** New LCD screen showing storage and logging status
+
+**Displays:**
+- SD card availability and free space
+- SPIFFS status and free space
+- Data logging enabled/disabled status
+- Current log file and size
+- Total log file count
+
+**Benefits:**
+- At-a-glance storage status without web access
+- Useful for standalone operation
+- Know when SD card needs attention
+
+#### 6. SD Card Error Handling
+
+**Issue:** SD card write failure caused overnight system hang at 3:29 PM.
+
+**Solution:** Comprehensive error handling with graceful degradation
+- Failure counter tracks consecutive SD errors
+- Auto-disable logging after 5 failures
+- System continues operating even if SD fails
+- Detailed serial error messages for diagnostics
+
+**Result:** SD issues can't hang the entire system
+
+#### 7. Configuration Cleanup
+
+**Removed:** Redundant `initDefaultConfig()` function
+- Function set defaults that were immediately overwritten by `loadConfig()`
+- Caused confusion with inconsistent defaults between functions
+- Reduced code by 39 lines
+
+**Benefits:**
+- Single source of truth for defaults (in `loadConfig()` calls)
+- No ambiguity about which defaults are used
+- Cleaner, more maintainable code
+
+### Configuration Defaults Updated
+
+Changed defaults to better user experience:
+
+| Setting | Old Default | New Default | Reason |
+|---------|-------------|-------------|---------|
+| `use_fahrenheit` | false | **true** | US market preference |
+| `enable_logging` | false | **true** | Logging ready out of box |
+
+### Debug Features Added
+
+**Serial Output:**
+- `[Settings] use_fahrenheit = X` - Shows current temp unit setting
+- `[API Save] use_fahrenheit received: X, set to: X` - Confirms save
+- `[FluidNC] ARP cache populated` - Connection diagnostics
+- `[LOGGER] SD failures tracked` - Storage diagnostics
+
+### Files Modified This Session
+
+**Configuration:**
+- `src/config/config.h` - Added resetToDefaults() declaration
+- `src/config/config.cpp` - Removed initDefaultConfig(), added resetToDefaults()
+
+**Web Interface:**
+- `data/web/settings.html` - Temperature unit selector with live conversion
+- `data/web/main.html` - Temperature display with unit from API
+- `data/web/admin.html` - Factory reset section, temp unit display
+- `src/web/web_handlers.h` - Added handleAPIResetToDefaults()
+- `src/web/web_handlers.cpp` - No-cache headers, temp conversion, reset API
+
+**Display:**
+- `src/display/ui_layout.h` - Added StorageLayout namespace
+- `src/display/ui_monitor.cpp` - Added convertTemp() helper
+- `src/display/ui_alignment.cpp` - Temperature unit conversion
+- `src/display/ui_storage.cpp` - **NEW** Storage mode implementation
+- `src/display/ui_modes.cpp` - Added Storage mode to switch statements
+- `src/display/ui_modes.h` - Storage mode declarations
+
+**Network:**
+- `src/network/network.cpp` - HTTP pre-connection for ARP cache
+
+**Logging:**
+- `src/logging/data_logger.cpp` - SD error handling with auto-disable
+
+**Input:**
+- `src/input/touch_handler.cpp` - Updated mode cycle to 5 modes
+
+**Total:** 18 files modified, 8 commits
+
+### Testing Status
+
+All features tested on hardware:
+- ✅ Temperature unit toggle works in web and LCD
+- ✅ Settings page no longer caches (shows current values)
+- ✅ FluidNC connects reliably after reboot
+- ✅ Factory reset clears all settings correctly
+- ✅ Storage mode displays accurate information
+- ✅ SD error handling prevents system hangs
+- ✅ No watchdog resets or performance issues
+
+### Production Readiness Checklist
+
+✅ **Code Quality** - Professional embedded systems architecture
+✅ **Error Handling** - Graceful degradation throughout
+✅ **User Experience** - Intuitive interface with smart defaults
+✅ **Best Practices** - Factory reset, proper caching, error recovery
+✅ **Documentation** - Comprehensive CLAUDE.md, inline comments
+✅ **Testing** - Hardware validated, overnight stability testing
+✅ **Reliability** - Non-blocking operations, watchdog management
+✅ **Maintainability** - Modular architecture, clear separation of concerns
+
+**Overall Status:** Production-ready for field deployment
 
 ---
 

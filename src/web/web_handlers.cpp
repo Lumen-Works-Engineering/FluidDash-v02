@@ -24,11 +24,19 @@ void handleRoot() {
 }
 
 void handleSettings() {
-  sendHTMLWithETag(server, "text/html", getSettingsHTML());
+  // Disable caching for settings page since values change based on config
+  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  server.sendHeader("Pragma", "no-cache");
+  server.sendHeader("Expires", "0");
+  server.send(200, "text/html", getSettingsHTML());
 }
 
 void handleAdmin() {
-  sendHTMLWithETag(server, "text/html", getAdminHTML());
+  // Disable caching for admin page since values change based on config
+  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  server.sendHeader("Pragma", "no-cache");
+  server.sendHeader("Expires", "0");
+  server.send(200, "text/html", getAdminHTML());
 }
 
 void handleWiFi() {
@@ -54,6 +62,18 @@ void handleDriverSetup() {
   if (html.length() == 0) {
     Serial.println("[Web] ERROR: Failed to load driver_setup.html");
     html = "<html><body><h1>Error: driver_setup.html not found</h1></body></html>";
+  }
+
+  sendHTMLWithETag(server, "text/html", html);
+}
+
+void handleLogs() {
+  // Load data logging page from filesystem
+  String html = storage.loadFile("/web/logs.html");
+
+  if (html.length() == 0) {
+    Serial.println("[Web] ERROR: Failed to load logs.html");
+    html = "<html><body><h1>Error: logs.html not found</h1></body></html>";
   }
 
   sendHTMLWithETag(server, "text/html", html);
@@ -96,6 +116,11 @@ void handleAPISave() {
   }
   if (server.hasArg("coord_decimals")) {
     cfg.coord_decimal_places = server.arg("coord_decimals").toInt();
+  }
+  if (server.hasArg("use_fahrenheit")) {
+    int value = server.arg("use_fahrenheit").toInt();
+    cfg.use_fahrenheit = (value == 1);
+    Serial.printf("[API Save] use_fahrenheit received: %d, set to: %d\n", value, cfg.use_fahrenheit);
   }
 
   // FluidNC Integration Settings
@@ -164,6 +189,17 @@ void handleAPIRestart() {
   server.send(200, "text/plain", "Restarting device...");
   delay(1000);
   ESP.restart();
+}
+
+void handleAPIResetToDefaults() {
+  Serial.println("[API] Factory reset requested");
+  server.send(200, "application/json", "{\"success\":true,\"message\":\"Factory reset complete. Device will restart...\"}");
+  delay(500);  // Let response send
+
+  resetToDefaults();  // Clear NVS
+
+  delay(1000);
+  ESP.restart();  // Restart to load defaults
 }
 
 void handleAPIWiFiConnect() {
@@ -665,12 +701,14 @@ void setupWebServer() {
   server.on("/wifi", HTTP_GET, handleWiFi);
   server.on("/sensors", HTTP_GET, handleSensors);
   server.on("/driver_setup", HTTP_GET, handleDriverSetup);
+  server.on("/logs", HTTP_GET, handleLogs);
   server.on("/api/config", HTTP_GET, handleAPIConfig);
   server.on("/api/status", HTTP_GET, handleAPIStatus);
   server.on("/api/save", HTTP_POST, handleAPISave);
   server.on("/api/admin/save", HTTP_POST, handleAPIAdminSave);
   server.on("/api/reset-wifi", HTTP_POST, handleAPIResetWiFi);
   server.on("/api/restart", HTTP_POST, handleAPIRestart);
+  server.on("/api/reset-defaults", HTTP_POST, handleAPIResetToDefaults);
   server.on("/api/reboot", HTTP_GET, []() {
       server.send(200, "application/json",
           "{\"status\":\"Rebooting device...\",\"message\":\"Device will restart in 1 second\"}");
@@ -737,9 +775,20 @@ String getSettingsHTML() {
     return "<html><body><h1>Error: settings.html not found</h1></body></html>";
   }
 
-  // Replace numeric input values
-  html.replace("%TEMP_LOW%", String(cfg.temp_threshold_low));
-  html.replace("%TEMP_HIGH%", String(cfg.temp_threshold_high));
+  // Replace temperature unit selection
+  Serial.printf("[Settings] use_fahrenheit = %d\n", cfg.use_fahrenheit);
+  html.replace("%USE_CELSIUS%", !cfg.use_fahrenheit ? "selected" : "");
+  html.replace("%USE_FAHRENHEIT%", cfg.use_fahrenheit ? "selected" : "");
+
+  // Replace numeric input values (convert to Fahrenheit if needed for display)
+  float tempLow = cfg.temp_threshold_low;
+  float tempHigh = cfg.temp_threshold_high;
+  if (cfg.use_fahrenheit) {
+    tempLow = (tempLow * 9.0 / 5.0) + 32.0;
+    tempHigh = (tempHigh * 9.0 / 5.0) + 32.0;
+  }
+  html.replace("%TEMP_LOW%", String(tempLow, 1));
+  html.replace("%TEMP_HIGH%", String(tempHigh, 1));
   html.replace("%FAN_MIN%", String(cfg.fan_min_speed));
   html.replace("%PSU_LOW%", String(cfg.psu_alert_low));
   html.replace("%PSU_HIGH%", String(cfg.psu_alert_high));
@@ -778,12 +827,6 @@ String getAdminHTML() {
     Serial.println("[Web] ERROR: Failed to load admin.html");
     return "<html><body><h1>Error: admin.html not found</h1></body></html>";
   }
-
-  // Replace calibration offset values (with 2 decimal places for temp)
-  html.replace("%CAL_X%", String(cfg.temp_offset_x, 2));
-  html.replace("%CAL_YL%", String(cfg.temp_offset_yl, 2));
-  html.replace("%CAL_YR%", String(cfg.temp_offset_yr, 2));
-  html.replace("%CAL_Z%", String(cfg.temp_offset_z, 2));
 
   // Replace PSU calibration value (with 3 decimal places)
   html.replace("%PSU_CAL%", String(cfg.psu_voltage_cal, 3));
@@ -883,11 +926,16 @@ String getStatusJSON() {
   doc["wifi_rssi"] = WiFi.RSSI();
   doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
 
-  // Temperatures
+  // Temperatures (convert based on user preference)
   JsonArray temps = doc["temperatures"].to<JsonArray>();
   for (int i = 0; i < 4; i++) {
-    temps.add(sensors.temperatures[i]);
+    float temp = sensors.temperatures[i];
+    if (cfg.use_fahrenheit) {
+      temp = (temp * 9.0 / 5.0) + 32.0;
+    }
+    temps.add(temp);
   }
+  doc["temp_unit"] = cfg.use_fahrenheit ? "F" : "C";
 
   // PSU
   doc["psu_voltage"] = sensors.psuVoltage;

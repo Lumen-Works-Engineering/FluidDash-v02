@@ -14,6 +14,8 @@ void drawGraphMode();
 void updateGraphMode();
 void drawNetworkMode();
 void updateNetworkMode();
+void drawStorageMode();
+void updateStorageMode();
 
 // Helper functions
 void drawTempGraph(int x, int y, int w, int h);

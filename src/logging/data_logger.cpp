@@ -73,10 +73,24 @@ void DataLogger::ensureLogDirectory() {
 }
 
 void DataLogger::writeLogEntry() {
+    // Quick check - if SD card init fails, disable logging to prevent repeated hangs
+    static int sdFailureCount = 0;
+    const int MAX_SD_FAILURES = 5;
+
     if (!SD.begin()) {
-        Serial.println("[LOGGER] ERROR: SD card not available");
+        sdFailureCount++;
+        Serial.printf("[LOGGER] ERROR: SD card not available (failure %d/%d)\n",
+                     sdFailureCount, MAX_SD_FAILURES);
+
+        if (sdFailureCount >= MAX_SD_FAILURES) {
+            Serial.println("[LOGGER] Too many SD failures - disabling logging");
+            _enabled = false;  // Auto-disable to prevent system hang
+        }
         return;
     }
+
+    // Reset failure counter on success
+    sdFailureCount = 0;
 
     String filename = getCurrentLogFilename();
     bool isNewFile = !SD.exists(filename.c_str());
@@ -84,27 +98,35 @@ void DataLogger::writeLogEntry() {
     // Check if we need to rotate
     if (!isNewFile) {
         File existingFile = SD.open(filename.c_str(), FILE_READ);
-        if (existingFile && existingFile.size() > MAX_LOG_SIZE) {
-            existingFile.close();
-            rotateLogFile();
-            filename = getCurrentLogFilename();
-            isNewFile = true;  // New file after rotation
-        } else if (existingFile) {
-            existingFile.close();
+        if (existingFile) {
+            if (existingFile.size() > MAX_LOG_SIZE) {
+                existingFile.close();
+                rotateLogFile();
+                filename = getCurrentLogFilename();
+                isNewFile = true;  // New file after rotation
+            } else {
+                existingFile.close();
+            }
         }
     }
 
-    // Open file for append
+    // Open file for append with error handling
     File logFile = SD.open(filename.c_str(), FILE_APPEND);
     if (!logFile) {
         Serial.print("[LOGGER] ERROR: Failed to open ");
         Serial.println(filename);
+        sdFailureCount++;
         return;
     }
 
     // Write CSV header if file is new
     if (isNewFile) {
-        logFile.println("Timestamp,TempX,TempYL,TempYR,TempZ,PSU_Voltage,Fan_RPM,Fan_Speed,Machine_State,Pos_X,Pos_Y,Pos_Z");
+        size_t written = logFile.println("Timestamp,TempX,TempYL,TempYR,TempZ,PSU_Voltage,Fan_RPM,Fan_Speed,Machine_State,Pos_X,Pos_Y,Pos_Z");
+        if (written == 0) {
+            Serial.println("[LOGGER] ERROR: Failed to write header");
+            logFile.close();
+            return;
+        }
     }
 
     // Get timestamp from RTC (or fallback to uptime)
@@ -136,8 +158,16 @@ void DataLogger::writeLogEntry() {
         fluidnc.posZ
     );
 
-    logFile.println(logLine);
+    size_t written = logFile.println(logLine);
     logFile.close();
+
+    if (written == 0) {
+        Serial.println("[LOGGER] ERROR: Failed to write log entry");
+        sdFailureCount++;
+    } else {
+        // Optional: Uncomment for verbose logging
+        // Serial.printf("[LOGGER] Wrote entry (%d bytes)\n", written);
+    }
 }
 
 void DataLogger::rotateLogFile() {

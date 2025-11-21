@@ -11,6 +11,7 @@ void handleAdmin();
 void handleWiFi();
 void handleSensors();
 void handleDriverSetup();
+void handleLogs();
 
 // API handlers
 void handleAPIConfig();
@@ -19,6 +20,7 @@ void handleAPISave();
 void handleAPIAdminSave();
 void handleAPIResetWiFi();
 void handleAPIRestart();
+void handleAPIResetToDefaults();
 void handleAPIWiFiConnect();
 void handleAPIRTC();
 void handleAPIRTCSet();

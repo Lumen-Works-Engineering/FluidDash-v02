@@ -34,28 +34,11 @@
     </div>
 
     <div class='card'>
-      <h2>Current Readings (Uncalibrated)</h2>
+      <h2>Current Readings</h2>
       <div id='readings'>Loading...</div>
     </div>
 
     <form id='adminForm'>
-      <div class='card'>
-        <h2>Temperature Calibration</h2>
-        <p style='color:#aaa'>Enter offset to add/subtract from each sensor</p>
-
-        <label>X-Axis Offset (°C)</label>
-        <input type='number' name='cal_x' value='%CAL_X%' step='0.1'>
-
-        <label>YL-Axis Offset (°C)</label>
-        <input type='number' name='cal_yl' value='%CAL_YL%' step='0.1'>
-
-        <label>YR-Axis Offset (°C)</label>
-        <input type='number' name='cal_yr' value='%CAL_YR%' step='0.1'>
-
-        <label>Z-Axis Offset (°C)</label>
-        <input type='number' name='cal_z' value='%CAL_Z%' step='0.1'>
-      </div>
-
       <div class='card'>
         <h2>PSU Voltage Calibration</h2>
         <p style='color:#aaa'>Voltage divider multiplier (measure with multimeter)</p>
@@ -89,6 +72,29 @@
         <button type='button' onclick='setRTCNow()'>📅 Use Browser Time</button>
       </form>
     </div>
+
+    <div class='card' style='margin-top:30px;border:3px solid #ff0000;background:#3a1a1a'>
+      <h2 style='color:#ff0000'>⚠️ Factory Reset</h2>
+      <div class='warning' style='background:#ff0000'>
+        🚨 DANGER: This will erase ALL settings and return device to factory defaults!
+      </div>
+      <p style='color:#aaa;margin:20px 0'>
+        This will permanently delete:
+      </p>
+      <ul style='color:#aaa;margin-left:20px'>
+        <li>WiFi credentials</li>
+        <li>FluidNC connection settings</li>
+        <li>Temperature thresholds and calibration</li>
+        <li>Sensor names and driver assignments</li>
+        <li>All user preferences</li>
+      </ul>
+      <p style='color:#ff6600;font-weight:bold;margin:20px 0'>
+        Device will restart and require full setup again.
+      </p>
+      <button type='button' style='background:#ff0000;margin-top:20px' onclick='resetToDefaults()'>
+        🗑️ Reset to Factory Defaults
+      </button>
+    </div>
   </div>
 
   <script>
@@ -96,9 +102,10 @@
       fetch('/api/status')
         .then(r => r.json())
         .then(data => {
+          let unit = data.temp_unit || 'C';
           let html = '';
           ['X', 'YL', 'YR', 'Z'].forEach((name, i) => {
-            html += `<div class='current-reading'>${name}: ${data.temperatures[i].toFixed(2)}°C</div>`;
+            html += `<div class='current-reading'>${name}: ${data.temperatures[i].toFixed(2)}°${unit}</div>`;
           });
           html += `<div class='current-reading'>PSU: ${data.psu_voltage.toFixed(2)}V</div>`;
           document.getElementById('readings').innerHTML = html;
@@ -167,6 +174,29 @@
         }
       });
     });
+
+    function resetToDefaults() {
+      // Double confirmation with scary warning
+      if (!confirm('⚠️ WARNING: This will DELETE ALL SETTINGS!\n\nAre you absolutely sure you want to reset to factory defaults?')) {
+        return;
+      }
+
+      if (!confirm('🚨 FINAL WARNING!\n\nThis action CANNOT be undone.\n\nDevice will restart and you will need to:\n• Reconnect to WiFi\n• Reconfigure all settings\n• Reassign all sensors\n\nContinue with factory reset?')) {
+        return;
+      }
+
+      fetch('/api/reset-defaults', {
+        method: 'POST'
+      })
+      .then(r => r.json())
+      .then(data => {
+        alert('✅ ' + data.message);
+        // Device will restart automatically
+      })
+      .catch(err => {
+        alert('Error during reset. Check device.');
+      });
+    }
 
     updateReadings();
     updateRTCTime();

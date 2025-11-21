@@ -8,7 +8,8 @@ enum DisplayMode {
   MODE_MONITOR,
   MODE_ALIGNMENT,
   MODE_GRAPH,
-  MODE_NETWORK
+  MODE_NETWORK,
+  MODE_STORAGE
 };
 
 // Element types for JSON-defined screens
@@ -114,8 +115,8 @@ extern ScreenLayout networkLayout;
 extern bool layoutsLoaded;
 
 // Function declarations
-void initDefaultConfig();
 void loadConfig();
 void saveConfig();
+void resetToDefaults();
 
 #endif // CONFIG_H

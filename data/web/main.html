@@ -54,6 +54,7 @@
       <a href='/admin' class='link-button'><button>🔧 Admin/Calibration</button></a>
       <a href='/driver_setup' class='link-button'><button>🎯 Driver Setup</button></a>
       <a href='/sensors' class='link-button'><button>🌡️ Sensor Config</button></a>
+      <a href='/logs' class='link-button'><button>📊 Data Logging</button></a>
       <a href='/wifi' class='link-button'><button>📡 WiFi Setup</button></a>
       <button onclick='restart()'>🔄 Restart Device</button>
     </div>
@@ -76,9 +77,14 @@
 
           let maxTemp = Math.max(...data.temperatures);
           let tempEl = document.getElementById('max_temp');
-          tempEl.textContent = maxTemp.toFixed(1) + '°C';
+          let unit = data.temp_unit || 'C';
+          tempEl.textContent = maxTemp.toFixed(1) + '°' + unit;
+
+          // Adjust thresholds based on unit (50C = 122F, 35C = 95F)
+          let hotThreshold = (unit === 'F') ? 122 : 50;
+          let warnThreshold = (unit === 'F') ? 95 : 35;
           tempEl.className = 'status-value ' +
-            (maxTemp > 50 ? 'temp-hot' : maxTemp > 35 ? 'temp-warn' : 'temp-ok');
+            (maxTemp > hotThreshold ? 'temp-hot' : maxTemp > warnThreshold ? 'temp-warn' : 'temp-ok');
 
           document.getElementById('fan_speed').textContent = data.fan_speed + '%';
           document.getElementById('psu_volt').textContent = data.psu_voltage.toFixed(1) + 'V';

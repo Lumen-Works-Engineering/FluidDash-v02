@@ -23,7 +23,25 @@ void setupWiFiManager() {
 void connectFluidNC() {
     Serial.printf("[FluidNC] Attempting to connect to ws://%s:%d/ws\n",
                   cfg.fluidnc_ip, cfg.fluidnc_port);
-    webSocket.begin(cfg.fluidnc_ip, cfg.fluidnc_port, "/ws");  // Add /ws path
+
+    // Pre-connection: Send HTTP GET to populate ARP cache and verify host is reachable
+    // This solves the issue where FluidNC is running but network path isn't established
+    Serial.println("[FluidNC] Sending pre-connection HTTP request to populate ARP cache...");
+    WiFiClient client;
+    client.setTimeout(2000);  // 2 second timeout
+    if (client.connect(cfg.fluidnc_ip, 80)) {
+        Serial.println("[FluidNC] Host is reachable, ARP cache populated");
+        client.print("GET / HTTP/1.1\r\nHost: ");
+        client.print(cfg.fluidnc_ip);
+        client.print("\r\nConnection: close\r\n\r\n");
+        client.stop();
+        delay(100);  // Brief delay to let network settle
+    } else {
+        Serial.println("[FluidNC] Warning: Host not reachable via HTTP, attempting WebSocket anyway...");
+    }
+
+    // Now connect WebSocket
+    webSocket.begin(cfg.fluidnc_ip, cfg.fluidnc_port, "/ws");
     webSocket.onEvent(fluidNCWebSocketEvent);
     webSocket.setReconnectInterval(5000);
     Serial.println("[FluidNC] WebSocket initialized, waiting for connection...");
