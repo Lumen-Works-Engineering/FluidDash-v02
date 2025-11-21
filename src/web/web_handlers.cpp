@@ -109,6 +109,9 @@ void handleAPISave() {
   if (server.hasArg("coord_decimals")) {
     cfg.coord_decimal_places = server.arg("coord_decimals").toInt();
   }
+  if (server.hasArg("use_fahrenheit")) {
+    cfg.use_fahrenheit = (server.arg("use_fahrenheit").toInt() == 1);
+  }
 
   // FluidNC Integration Settings
   bool fluidncWasEnabled = cfg.fluidnc_auto_discover;
