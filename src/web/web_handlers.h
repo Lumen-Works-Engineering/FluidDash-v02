@@ -20,6 +20,7 @@ void handleAPISave();
 void handleAPIAdminSave();
 void handleAPIResetWiFi();
 void handleAPIRestart();
+void handleAPIResetToDefaults();
 void handleAPIWiFiConnect();
 void handleAPIRTC();
 void handleAPIRTCSet();

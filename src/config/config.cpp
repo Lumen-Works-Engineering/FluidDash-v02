@@ -97,3 +97,14 @@ void saveConfig() {
 
   Serial.println("Configuration saved");
 }
+
+void resetToDefaults() {
+  Serial.println("[Config] Resetting all settings to factory defaults...");
+
+  // Clear all stored preferences
+  prefs.begin("fluiddash", false);
+  prefs.clear();  // Wipe entire NVS namespace
+  prefs.end();
+
+  Serial.println("[Config] NVS cleared. Defaults will be used on next boot.");
+}

@@ -191,6 +191,17 @@ void handleAPIRestart() {
   ESP.restart();
 }
 
+void handleAPIResetToDefaults() {
+  Serial.println("[API] Factory reset requested");
+  server.send(200, "application/json", "{\"success\":true,\"message\":\"Factory reset complete. Device will restart...\"}");
+  delay(500);  // Let response send
+
+  resetToDefaults();  // Clear NVS
+
+  delay(1000);
+  ESP.restart();  // Restart to load defaults
+}
+
 void handleAPIWiFiConnect() {
   String ssid = "";
   String password = "";
@@ -697,6 +708,7 @@ void setupWebServer() {
   server.on("/api/admin/save", HTTP_POST, handleAPIAdminSave);
   server.on("/api/reset-wifi", HTTP_POST, handleAPIResetWiFi);
   server.on("/api/restart", HTTP_POST, handleAPIRestart);
+  server.on("/api/reset-defaults", HTTP_POST, handleAPIResetToDefaults);
   server.on("/api/reboot", HTTP_GET, []() {
       server.send(200, "application/json",
           "{\"status\":\"Rebooting device...\",\"message\":\"Device will restart in 1 second\"}");

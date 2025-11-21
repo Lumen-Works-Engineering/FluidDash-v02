@@ -117,5 +117,6 @@ extern bool layoutsLoaded;
 // Function declarations
 void loadConfig();
 void saveConfig();
+void resetToDefaults();
 
 #endif // CONFIG_H
