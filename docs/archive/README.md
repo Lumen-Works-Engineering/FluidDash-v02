@@ -22,6 +22,9 @@ This directory contains historical documentation from the development and refact
 **Code Reviews:**
 - `Claude_Opus_Code_Review_FluidDash-v02.md` - Opus code review from refactoring session
 
+**Alternative Approaches (Explored but Not Implemented):**
+- `INI_Layout_Override_System.md` - Runtime layout override system design (superseded by Layout Code Generator)
+
 ## Status Summary (as of archive date)
 
 **Completed Phases:**
