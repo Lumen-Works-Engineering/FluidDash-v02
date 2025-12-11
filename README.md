@@ -1,7 +1,7 @@
-# CLAUDE.md - AI Assistant Development Guide
+# Readme for FluidDash v0.3.100
 
 **Project:** FluidDash v02 - ESP32 CYD Edition
-**Last Updated:** 2025-01-22
+**Last Updated:** 2025-12-11
 **Version:** 0.3.100
 **Status:** Production Ready - Full Feature Set Complete
 
@@ -90,6 +90,7 @@
 ### Hardware Platform
 
 **Target Device:** ESP32-2432S028 (CYD)
+
 - **MCU:** Dual-core ESP32 @ 240MHz (4MB flash)
 - **Display:** 480×320 IPS LCD (ST7796 controller, SPI interface)
 - **Touchscreen:** XPT2046 resistive touch controller (shared SPI bus)
@@ -98,43 +99,48 @@
 
 ### Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| **Build System** | PlatformIO 3.x |
-| **Framework** | Arduino ESP32 Core 6.8.0 |
-| **Language** | C++17 |
-| **Graphics** | LovyanGFX 1.1.16 |
-| **Networking** | WiFi + WebSockets 2.7.1 |
-| **Configuration** | ArduinoJson 7.2.0 |
-| **Web UI** | Vanilla HTML5/CSS3/JavaScript |
+| Component         | Technology                    |
+| ----------------- | ----------------------------- |
+| **Build System**  | PlatformIO 3.x                |
+| **Framework**     | Arduino ESP32 Core 6.8.0      |
+| **Language**      | C++17                         |
+| **Graphics**      | LovyanGFX 1.1.16              |
+| **Networking**    | WiFi + WebSockets 2.7.1       |
+| **Configuration** | ArduinoJson 7.2.0             |
+| **Web UI**        | Vanilla HTML5/CSS3/JavaScript |
 
 ---
 
-## Quick Start for AI Assistants
+## Quick Start
 
 ### First-Time Setup
 
 1. **Check environment:**
+   
    ```bash
    pio --version  # Should be PlatformIO Core 6.x+
    ```
 
 2. **Install dependencies:**
+   
    ```bash
    pio pkg install -e esp32dev
    ```
 
 3. **Build firmware:**
+   
    ```bash
    pio run -e esp32dev
    ```
 
 4. **Upload to device:**
+   
    ```bash
    pio run -e esp32dev -t upload
    ```
 
 5. **Monitor serial output:**
+   
    ```bash
    pio device monitor -b 115200
    ```
@@ -154,6 +160,7 @@ When approaching this codebase, read these files in order:
 ### Before Making Changes
 
 **ALWAYS:**
+
 - ✅ Review `Config` struct in `config.h` before adding configuration options
 - ✅ Use `extern` declarations for globals accessed across modules
 - ✅ Test with both SD card present and absent (dual-storage fallback)
@@ -163,6 +170,7 @@ When approaching this codebase, read these files in order:
 - ✅ Check `Phased_Refactoring_Plan_2025-11-27_0932.md` for implementation status
 
 **NEVER:**
+
 - ❌ Use blocking delays in `loop()` - this is a real-time system
 - ❌ Make WiFi/FluidNC mandatory - they are OPTIONAL features
 - ❌ Add blocking operations during boot (10s watchdog limit)
@@ -174,60 +182,10 @@ When approaching this codebase, read these files in order:
 
 ---
 
-## Refactoring & Architecture History
-
-### Latest Updates (2025-01-20)
-
-**✅ Complete Refactoring Accomplished:**
-All planned refactoring phases (1, 2, 4, 5, 7) are now complete. The codebase has been fully modularized with professional-grade architecture. Historical planning documents have been archived to `docs/archive/`.
-
-**✅ Phase 7: Temperature Sensor Management Complete**
-- DS18B20 UID-to-name mapping with NVS persistence
-- Touch detection for sensor identification (temperature rise method)
-- Driver position assignment system (X-Axis, Y-Left, Y-Right, Z-Axis)
-- Web-based sensor configuration interface
-
-**✅ Phase 4 & 5: Web Server Optimization & Code Cleanup Complete**
-- Web handlers organized and optimized
-- Code structure cleaned and documented
-- Display modes properly separated
-
-### Earlier Refactoring Work (2025-01-17)
-
-**✅ Phase 1: Storage System & HTML Integration**
-- Storage properly initialized via `storage.begin()` in setup()
-- HTML files load from filesystem (SD/LittleFS fallback)
-- Web handlers use `storage.loadFile()` instead of PROGMEM
-- JSON API functions implemented (`getConfigJSON()`, `getStatusJSON()`)
-
-**✅ Phase 2: JSON Screen Rendering Disabled**
-- Hard-coded screen rendering exclusively used
-- `drawMonitorMode()`, `drawAlignmentMode()`, `drawGraphMode()`, `drawNetworkMode()`
-- JSON layout code dormant (not loaded, but still in codebase for future use)
-- Display update performance improved
-
-**✅ Critical Fix: Watchdog Boot Loop Resolved**
-- Removed blocking `delay()` calls from setup
-- WiFi connection timeout reduced to 5 seconds
-- FluidNC connection removed from automatic boot sequence
-- Boot time now ~5-8 seconds (well under 10s watchdog limit)
-
-**✅ Architecture Refactor: WiFi Made Optional**
-- Device runs standalone without WiFi (core functionality)
-- 3-tier boot logic: No credentials → AP mode, Credentials → STA mode, Failed → Standalone
-- AP mode auto-entry on first boot (SSID: "FluidDash-Setup")
-- Button hold (>5s) to manually enter AP mode
-- Web server only starts when WiFi available
-
-**✅ FluidNC Integration Made Optional**
-- `cfg.fluidnc_auto_discover = false` by default
-- No automatic connection attempts
-- Must be explicitly enabled via web settings
-- WebSocket loop only runs if connection was manually initiated
-
 ### Current Architecture State
 
 **Boot Sequence:**
+
 1. Display initialization (~1s)
 2. Storage initialization (SD + LittleFS)
 3. RTC detection
@@ -242,12 +200,12 @@ All planned refactoring phases (1, 2, 4, 5, 7) are now complete. The codebase ha
 
 **Operation Modes:**
 
-| Mode | WiFi | Web Server | FluidNC | Use Case |
-|------|------|------------|---------|----------|
-| **Standalone** | ❌ | ❌ | ❌ | Default mode - temp/PSU/fan monitoring only |
-| **AP Setup** | ✅ (AP) | ✅ | ❌ | First boot or button hold >5s - configure WiFi |
-| **WiFi Only** | ✅ (STA) | ✅ | ❌ | Configured WiFi - web interface available |
-| **Full Featured** | ✅ (STA) | ✅ | ✅ | WiFi + FluidNC manually enabled |
+| Mode              | WiFi    | Web Server | FluidNC | Use Case                                       |
+| ----------------- | ------- | ---------- | ------- | ---------------------------------------------- |
+| **Standalone**    | ❌       | ❌          | ❌       | Default mode - temp/PSU/fan monitoring only    |
+| **AP Setup**      | ✅ (AP)  | ✅          | ❌       | First boot or button hold >5s - configure WiFi |
+| **WiFi Only**     | ✅ (STA) | ✅          | ❌       | Configured WiFi - web interface available      |
+| **Full Featured** | ✅ (STA) | ✅          | ✅       | WiFi + FluidNC manually enabled                |
 
 **Critical Global Flags:**
 
@@ -257,28 +215,16 @@ bool webServerStarted = false;       // true when web server is running
 bool fluidncConnectionAttempted = false;  // true if FluidNC connection initiated
 ```
 
-### Key Files Modified During Refactoring
 
-**src/main.cpp:**
-- Lines 157-161: Replaced blocking delay with yield loop
-- Lines 204-273: WiFi refactoring (3-tier boot logic)
-- Lines 282-289: Removed automatic FluidNC connection
-- Lines 311-352: WebSocket loop guarded by `fluidncConnectionAttempted`
-- Lines 686-804: Implemented `getConfigJSON()` and `getStatusJSON()`
-
-**src/config/config.cpp:**
-- Line 21: `cfg.fluidnc_auto_discover = false` (standalone default)
-- Line 59: Load default = `false` for auto-discovery
-
-**src/display/ui_modes.cpp:**
-- Lines 825-853: Updated `enterSetupMode()` to start web server
 
 ### Known Issues & Workarounds
 
 **Issue:** First boot shows NVS errors in serial
+
 ```
 [E] Preferences.cpp: nvs_get_str len fail: dev_name NOT_FOUND
 ```
+
 **Status:** Expected behavior - NVS is empty on first boot, defaults are used
 
 **Issue:** SD card initialization may fail if display initialized too late
@@ -289,13 +235,8 @@ bool fluidncConnectionAttempted = false;  // true if FluidNC connection initiate
 
 ### Future Development
 
-**Immediate Next Steps:**
-- **Phase 6:** Hardware testing and validation (user-driven when ready)
-- **Documentation:** Historical refactoring plans archived to `docs/archive/`
-
 **Future Feature Ideas:**
-- **Touchscreen Support:** Add touch-based UI navigation
-- **Data Logging:** CSV export of temperature/PSU history to SD card
+
 - **OTA Updates:** Over-the-air firmware update capability
 - **Advanced Graphing:** Multi-sensor overlay graphs
 - **Alert System:** Configurable temperature/voltage alerts with visual/audio feedback
@@ -307,16 +248,11 @@ bool fluidncConnectionAttempted = false;  // true if FluidNC connection initiate
 ```
 FluidDash-v02/
 ├── platformio.ini                 # PlatformIO build configuration
-├── CLAUDE.md                      # This file - AI assistant guide (single source of truth)
-│
+
 ├── docs/                          # Documentation
 │   └── archive/                   # Historical planning docs (completed phases)
 │       ├── README.md              # Archive index
-│       ├── Phased_Refactoring_Plan_2025-11-27_0932.md
-│       ├── PROGRESS_LOG.md
-│       ├── TESTING_CHECKLIST.md
-│       └── (other completed planning docs)
-│
+
 ├── data/                          # Filesystem data (uploaded to SPIFFS/SD)
 │   ├── web/                       # Web interface HTML files
 │   │   ├── main.html              # Main dashboard
@@ -370,15 +306,15 @@ FluidDash-v02/
 
 ### Module Responsibility Matrix
 
-| Module | Primary Responsibility | Key Files | External Dependencies |
-|--------|------------------------|-----------|------------------------|
-| **Config** | Configuration persistence & defaults | config.h, config.cpp | ArduinoJson, SD/SPIFFS |
-| **Sensors** | Hardware sensor interfacing | sensors.h, sensors.cpp | DallasTemperature, OneWire |
-| **Display** | Screen rendering & UI modes | display.*, ui_modes.*, screen_renderer.* | LovyanGFX |
-| **Network** | WiFi, WebSocket, FluidNC comms | network.h, network.cpp | WiFi, WebSockets, mDNS |
-| **Storage** | Filesystem abstraction | storage_manager.* | SD, SPIFFS/LittleFS |
-| **Web** | HTTP server & REST API | web_utils.h, main.cpp | WebServer |
-| **Utils** | Memory management, buffers | utils.* | None |
+| Module      | Primary Responsibility               | Key Files                                | External Dependencies      |
+| ----------- | ------------------------------------ | ---------------------------------------- | -------------------------- |
+| **Config**  | Configuration persistence & defaults | config.h, config.cpp                     | ArduinoJson, SD/SPIFFS     |
+| **Sensors** | Hardware sensor interfacing          | sensors.h, sensors.cpp                   | DallasTemperature, OneWire |
+| **Display** | Screen rendering & UI modes          | display.*, ui_modes.*, screen_renderer.* | LovyanGFX                  |
+| **Network** | WiFi, WebSocket, FluidNC comms       | network.h, network.cpp                   | WiFi, WebSockets, mDNS     |
+| **Storage** | Filesystem abstraction               | storage_manager.*                        | SD, SPIFFS/LittleFS        |
+| **Web**     | HTTP server & REST API               | web_utils.h, main.cpp                    | WebServer                  |
+| **Utils**   | Memory management, buffers           | utils.*                                  | None                       |
 
 ---
 
@@ -391,56 +327,7 @@ FluidDash-v02/
 
 **Current Working Branch:** `main`
 
-### Commit Message Conventions
-
-Follow conventional commits format:
-
-```
-<type>: <short description>
-
-[optional body explaining WHY, not WHAT]
-
-Examples:
-feat: Add DS18B20 UID-to-name mapping system
-fix: Prevent watchdog timeout during SD card writes
-refactor: Extract HTML pages to data/web/ directory
-docs: Update sensor management implementation guide
-```
-
-**Types:** `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`
-
-### Pull Request Workflow
-
-1. Create feature branch from `main`
-2. Make changes, commit with clear messages
-3. Test on hardware (if possible) or verify build
-4. Push to remote: `git push -u origin <branch-name>`
-5. Create PR with description of changes
-6. Await review/merge
-
-### Build & Test Cycle
-
-```bash
-# 1. Clean build
-pio run -e esp32dev -t clean
-
-# 2. Build firmware
-pio run -e esp32dev
-
-# 3. Check for errors/warnings
-# Review output for memory usage, warnings
-
-# 4. Upload to device (if hardware available)
-pio run -e esp32dev -t upload
-
-# 5. Monitor serial output
-pio device monitor -b 115200
-
-# 6. Test changes via web interface
-# Open http://<device-ip>/ in browser
-```
-
-### Filesystem Data Upload
+### ### Filesystem Data Upload
 
 To upload `/data/` directory to device SPIFFS:
 
@@ -456,17 +343,17 @@ pio run -e esp32dev -t uploadfs
 
 ### Naming Conventions
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| **Variables** | camelCase | `float psuVoltage = 0;` |
-| **Functions** | camelCase | `void readTemperatures();` |
-| **Constants** | SCREAMING_SNAKE_CASE | `#define MAX_SENSORS 10` |
-| **Enums** | PascalCase (type), SCREAMING_SNAKE_CASE (values) | `enum DisplayMode { MODE_MONITOR };` |
-| **Structs** | PascalCase | `struct Config { ... };` |
-| **Classes** | PascalCase | `class StorageManager { ... };` |
-| **Macros** | SCREAMING_SNAKE_CASE | `#define DEBUG_MODE 1` |
-| **Files** | snake_case | `screen_renderer.cpp` |
-| **Global vars** | camelCase with context | `bool fluidncConnected;` |
+| Element         | Convention                                       | Example                              |
+| --------------- | ------------------------------------------------ | ------------------------------------ |
+| **Variables**   | camelCase                                        | `float psuVoltage = 0;`              |
+| **Functions**   | camelCase                                        | `void readTemperatures();`           |
+| **Constants**   | SCREAMING_SNAKE_CASE                             | `#define MAX_SENSORS 10`             |
+| **Enums**       | PascalCase (type), SCREAMING_SNAKE_CASE (values) | `enum DisplayMode { MODE_MONITOR };` |
+| **Structs**     | PascalCase                                       | `struct Config { ... };`             |
+| **Classes**     | PascalCase                                       | `class StorageManager { ... };`      |
+| **Macros**      | SCREAMING_SNAKE_CASE                             | `#define DEBUG_MODE 1`               |
+| **Files**       | snake_case                                       | `screen_renderer.cpp`                |
+| **Global vars** | camelCase with context                           | `bool fluidncConnected;`             |
 
 ### File Organization
 
@@ -530,11 +417,13 @@ static void helperFunction() {
 ### Comment Style
 
 **Section Headers:**
+
 ```cpp
 // ========== SECTION NAME ==========
 ```
 
 **Function Documentation:**
+
 ```cpp
 // Brief description of what function does
 // Parameters: param1 - description
@@ -545,11 +434,13 @@ void functionName(int param1) {
 ```
 
 **Inline Comments:**
+
 ```cpp
 int value = calculateValue();  // Explain WHY, not WHAT
 ```
 
 **TODOs:**
+
 ```cpp
 // TODO: Add error handling for SD card failures
 // FIXME: Race condition when WebSocket reconnects
@@ -559,6 +450,7 @@ int value = calculateValue();  // Explain WHY, not WHAT
 ### Variable Declaration Style
 
 **Prefer:**
+
 ```cpp
 // Initialized at declaration
 float temperature = 0.0;
@@ -572,6 +464,7 @@ float temperatures[4] = {0};
 ```
 
 **Avoid:**
+
 ```cpp
 // Uninitialized variables
 float temperature;
@@ -586,6 +479,7 @@ bool connected = false;
 ### Memory Management
 
 **For globals and persistent data:**
+
 ```cpp
 // Use fixed-size arrays when size is known
 float temperatures[4] = {0};
@@ -605,6 +499,7 @@ void allocateBuffer(uint16_t size) {
 ```
 
 **For temporary data:**
+
 ```cpp
 // Small buffers: stack allocation
 char buffer[64];
@@ -859,6 +754,7 @@ Global state variables:
 **Location:** `src/main.cpp`
 
 **Primary Responsibilities:**
+
 - Initialize hardware (display, sensors, RTC, WiFi)
 - Handle web server requests
 - Update sensors and display
@@ -866,6 +762,7 @@ Global state variables:
 - Maintain WebSocket connection
 
 **Critical Global Variables:**
+
 ```cpp
 extern DisplayMode currentMode;           // Current display mode
 extern float temperatures[4];             // DS18B20 readings
@@ -877,6 +774,7 @@ extern Config cfg;                        // Global configuration
 ```
 
 **Main Loop Structure:**
+
 ```cpp
 void loop() {
     server.handleClient();              // Process web requests
@@ -924,6 +822,7 @@ struct Config {
 ```
 
 **Usage:**
+
 ```cpp
 extern Config cfg;  // Declared in main.cpp
 
@@ -971,6 +870,7 @@ const SensorMapping* getSensorMappingByPosition(int8_t position);
 ```
 
 **Data Structures:**
+
 ```cpp
 struct SensorMapping {
     uint8_t uid[8];           // DS18B20 unique ROM address
@@ -990,11 +890,11 @@ extern std::vector<SensorMapping> sensorMappings;
 
 **Component Breakdown:**
 
-| File | Responsibility |
-|------|----------------|
-| `display.h/cpp` | LovyanGFX initialization, hardware setup |
-| `ui_modes.h/cpp` | Mode-specific rendering (Monitor, Graph, Alignment) |
-| `screen_renderer.h/cpp` | JSON layout parser and element renderer |
+| File                    | Responsibility                                      |
+| ----------------------- | --------------------------------------------------- |
+| `display.h/cpp`         | LovyanGFX initialization, hardware setup            |
+| `ui_modes.h/cpp`        | Mode-specific rendering (Monitor, Graph, Alignment) |
+| `screen_renderer.h/cpp` | JSON layout parser and element renderer             |
 
 **Key Functions:**
 
@@ -1048,6 +948,7 @@ Layouts are defined in `/data/screens/*.json`:
 **Location:** `src/network/network.h`, `src/network/network.cpp`
 
 **Responsibilities:**
+
 - WiFi connection management (STA mode)
 - WebSocket client for FluidNC
 - mDNS service discovery
@@ -1107,6 +1008,7 @@ std::vector<String> files = storage.listFiles("/screens");
 ```
 
 **Fallback Priority:**
+
 1. SD card (if available and file exists)
 2. SPIFFS/LittleFS (embedded filesystem)
 
@@ -1116,25 +1018,25 @@ std::vector<String> files = storage.listFiles("/screens");
 
 **REST API Endpoints:**
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/` | GET | Main dashboard (main.html) |
-| `/settings` | GET | Settings page |
-| `/admin` | GET | Calibration page |
-| `/sensors` | GET | Sensor configuration page |
-| `/driver_setup` | GET | Driver sensor assignment page |
-| `/api/config` | GET/POST | Get/set configuration |
-| `/api/status` | GET | System status (JSON) |
-| `/api/rtc` | GET/POST | RTC time management |
-| `/api/sensors/discover` | GET | Discover all DS18B20 UIDs |
-| `/api/sensors/list` | GET | List configured sensors |
-| `/api/sensors/temps` | GET | Get current temperatures |
-| `/api/sensors/detect` | POST | Detect touched sensor (temp rise) |
-| `/api/sensors/save` | POST | Save sensor configuration |
-| `/api/drivers/get` | GET | Get driver position assignments |
-| `/api/drivers/assign` | POST | Assign sensor UID to position |
-| `/api/drivers/clear` | POST | Clear position assignment |
-| `/upload` | POST | File upload handler |
+| Endpoint                | Method   | Purpose                           |
+| ----------------------- | -------- | --------------------------------- |
+| `/`                     | GET      | Main dashboard (main.html)        |
+| `/settings`             | GET      | Settings page                     |
+| `/admin`                | GET      | Calibration page                  |
+| `/sensors`              | GET      | Sensor configuration page         |
+| `/driver_setup`         | GET      | Driver sensor assignment page     |
+| `/api/config`           | GET/POST | Get/set configuration             |
+| `/api/status`           | GET      | System status (JSON)              |
+| `/api/rtc`              | GET/POST | RTC time management               |
+| `/api/sensors/discover` | GET      | Discover all DS18B20 UIDs         |
+| `/api/sensors/list`     | GET      | List configured sensors           |
+| `/api/sensors/temps`    | GET      | Get current temperatures          |
+| `/api/sensors/detect`   | POST     | Detect touched sensor (temp rise) |
+| `/api/sensors/save`     | POST     | Save sensor configuration         |
+| `/api/drivers/get`      | GET      | Get driver position assignments   |
+| `/api/drivers/assign`   | POST     | Assign sensor UID to position     |
+| `/api/drivers/clear`    | POST     | Clear position assignment         |
+| `/upload`               | POST     | File upload handler               |
 
 **Example API Response:**
 
@@ -1156,6 +1058,7 @@ GET /api/status
 **Purpose:** Map DS18B20 sensors to fixed display positions despite non-deterministic OneWire discovery order.
 
 **Key Concept:** The `displayPosition` field in `SensorMapping` explicitly maps sensor UIDs to positions:
+
 - `0` = X-Axis driver
 - `1` = Y-Left driver
 - `2` = Y-Right driver
@@ -1209,6 +1112,7 @@ if (sensor) {
 ```
 
 **Files Involved:**
+
 - `data/web/driver_setup.html` - User interface
 - `src/sensors/sensors.h/cpp` - Position management functions
 - `src/display/ui_modes.cpp` - Position-based display rendering
@@ -1538,11 +1442,13 @@ void loop() {
 ### Hardware Testing Checklist
 
 **Before upload:**
+
 - [ ] Code compiles without errors
 - [ ] No warnings about stack/heap overflow
 - [ ] RAM usage < 80% (check build output)
 
 **After upload:**
+
 - [ ] Serial monitor shows boot messages
 - [ ] RTC initializes (or "RTC not found" message)
 - [ ] WiFi connects (or AP mode starts)
@@ -1551,6 +1457,7 @@ void loop() {
 - [ ] Web server accessible at device IP
 
 **Functional tests:**
+
 - [ ] Button cycles through modes
 - [ ] Temperature readings update
 - [ ] Fan speed changes with temperature
@@ -1603,6 +1510,7 @@ void loop() {
 ```
 
 **Common culprits:**
+
 - SD card operations without timeout
 - Blocking network calls
 - Large file transfers
@@ -1622,6 +1530,7 @@ void loop() {
 ```
 
 Watch for decreasing free heap over time. If heap drops continuously:
+
 - Check for `new` without `delete`
 - Check for `String` concatenation in loops
 - Check for growing vectors without clearing
@@ -1649,6 +1558,7 @@ void setup() {
 **Issue:** Display SPI conflicts with SD card SPI if both use same bus.
 
 **Solution:** CYD uses separate SPI buses:
+
 - Display: HSPI (SPI1)
 - SD Card: VSPI (SPI2)
 
@@ -1659,6 +1569,7 @@ Pin definitions in `pins.h` must match this configuration.
 **Issue:** WebSocket disconnects and reconnects rapidly.
 
 **Causes:**
+
 - FluidNC IP unreachable
 - Network congestion
 - Firewall blocking connection
@@ -1680,6 +1591,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 **Issue:** DS18B20 returns -127°C (0x00) when not found or wiring issue.
 
 **Causes:**
+
 - Sensor not connected
 - Wrong GPIO pin
 - Missing 4.7kΩ pull-up resistor on data line
@@ -1733,6 +1645,7 @@ if (error) {
 **Issue:** Settings save but revert to defaults after reboot.
 
 **Causes:**
+
 - SD card removed
 - File write failed
 - Using SPIFFS but uploaded new firmware (erases SPIFFS)
@@ -1765,6 +1678,7 @@ void saveConfig() {
 **Issue:** Display flickers during updates or shows visual artifacts.
 
 **Causes:**
+
 - Redrawing entire screen on every update
 - SPI bus speed too high
 - Power supply voltage sag
@@ -1825,6 +1739,7 @@ if (error == DeserializationError::NoMemory) {
 **Issue:** Fan tachometer always shows 0 RPM despite fan running.
 
 **Causes:**
+
 - GPIO not configured for INPUT
 - Missing interrupt attachment
 - Fan doesn't have tachometer output (3-wire vs 4-wire fan)
@@ -1851,6 +1766,7 @@ void loop() {
 ### When Analyzing This Codebase
 
 **DO:**
+
 - ✅ Read `config.h` first to understand data structures
 - ✅ Check `pins.h` before modifying GPIO assignments
 - ✅ Review `SENSOR_MANAGEMENT_IMPLEMENTATION.md` before touching sensor code
@@ -1862,6 +1778,7 @@ void loop() {
 - ✅ Follow existing naming conventions
 
 **DON'T:**
+
 - ❌ Add `delay()` calls in main loop
 - ❌ Allocate large buffers on stack
 - ❌ Use `String` class for frequently-updated values
@@ -1874,6 +1791,7 @@ void loop() {
 ### When Making Code Changes
 
 **1. Understand the impact:**
+
 ```cpp
 // Before changing this:
 extern float temperatures[4];
@@ -1884,6 +1802,7 @@ extern float temperatures[4];
 ```
 
 **2. Preserve backward compatibility:**
+
 ```cpp
 // When adding new config fields:
 cfg.new_field = doc["new_field"] | DEFAULT_VALUE;
@@ -1891,6 +1810,7 @@ cfg.new_field = doc["new_field"] | DEFAULT_VALUE;
 ```
 
 **3. Test fallback paths:**
+
 ```cpp
 // If you change SD card code, test with:
 // 1. SD card present
@@ -1900,6 +1820,7 @@ cfg.new_field = doc["new_field"] | DEFAULT_VALUE;
 ```
 
 **4. Maintain code style:**
+
 ```cpp
 // Match existing style:
 void newFunction() {  // Not: void new_function()
@@ -1991,6 +1912,7 @@ Let's test step-by-step:
 ### When Proposing Architectural Changes
 
 **Consider:**
+
 - **Memory impact:** Will this increase RAM usage significantly?
 - **Compatibility:** Will existing configs/layouts still work?
 - **Complexity:** Does this add significant complexity for maintainability?
@@ -2039,12 +1961,13 @@ After running this code, you should see:
 
 Serial Output:
 ```
+
 [SENSOR] Discovering DS18B20 sensors...
 [SENSOR] Found 4 sensors
 [SENSOR] UID 0: 28FF641E8C160450
 [SENSOR] UID 1: 28AA32FC5D160468
-```
 
+```
 If you see "Found 0 sensors", check OneWire pin connection.
 ```
 
@@ -2056,25 +1979,25 @@ If you see "Found 0 sensors", check OneWire pin connection.
 
 **Complete GPIO assignment from `src/config/pins.h`:**
 
-| GPIO | Function | Description |
-|------|----------|-------------|
-| 0 | MODE_BUTTON_PIN | Boot button (mode switch) |
-| 4 | FAN_PWM_PIN | Fan PWM control |
-| 5 | SD_CS_PIN | SD card chip select |
-| 14 | TFT_DC | Display data/command |
-| 15 | TFT_CS | Display chip select |
-| 16 | RGB_LED_G | RGB LED - Green |
-| 17 | RGB_LED_B | RGB LED - Blue |
-| 18 | TFT_SCK | Display SPI clock |
-| 21 | TEMP_SENSOR_PIN | OneWire data (DS18B20) |
-| 22 | RGB_LED_R | RGB LED - Red |
-| 23 | TFT_MOSI | Display SPI MOSI |
-| 25 | I2C_SCL | RTC I2C clock |
-| 27 | TFT_BL | Display backlight |
-| 32 | I2C_SDA | RTC I2C data |
-| 33 | TOUCH_CS | Touchscreen chip select |
-| 34 | PSU_VOLTAGE_PIN | PSU voltage ADC |
-| 35 | FAN_TACH_PIN | Fan tachometer |
+| GPIO | Function        | Description               |
+| ---- | --------------- | ------------------------- |
+| 0    | MODE_BUTTON_PIN | Boot button (mode switch) |
+| 4    | FAN_PWM_PIN     | Fan PWM control           |
+| 5    | SD_CS_PIN       | SD card chip select       |
+| 14   | TFT_DC          | Display data/command      |
+| 15   | TFT_CS          | Display chip select       |
+| 16   | RGB_LED_G       | RGB LED - Green           |
+| 17   | RGB_LED_B       | RGB LED - Blue            |
+| 18   | TFT_SCK         | Display SPI clock         |
+| 21   | TEMP_SENSOR_PIN | OneWire data (DS18B20)    |
+| 22   | RGB_LED_R       | RGB LED - Red             |
+| 23   | TFT_MOSI        | Display SPI MOSI          |
+| 25   | I2C_SCL         | RTC I2C clock             |
+| 27   | TFT_BL          | Display backlight         |
+| 32   | I2C_SDA         | RTC I2C data              |
+| 33   | TOUCH_CS        | Touchscreen chip select   |
+| 34   | PSU_VOLTAGE_PIN | PSU voltage ADC           |
+| 35   | FAN_TACH_PIN    | Fan tachometer            |
 
 ### Color Reference (RGB565)
 
@@ -2134,12 +2057,14 @@ lib_deps =
 ## Changelog
 
 **2025-01-20:** Documentation consolidation and refactoring completion
+
 - All core refactoring phases (1, 2, 4, 5, 7) marked complete
 - Historical planning docs archived to `docs/archive/`
 - CLAUDE.md updated as single source of truth
 - Production-ready codebase with professional architecture
 
 **2025-01-18:** Phases 4, 5, 7 and Driver Assignment complete
+
 - Phase 7: Temperature sensor naming interface with NVS persistence
 - Driver position assignment system (touch detection for sensor mapping)
 - Phase 4: Web server optimization
@@ -2147,6 +2072,7 @@ lib_deps =
 - FluidNC configuration tested and working
 
 **2025-01-17:** Phases 1, 2, and critical fixes complete
+
 - Phase 1: Storage system initialized, HTML files loading from filesystem
 - Phase 2: JSON screen rendering disabled (hard-coded screens)
 - Critical boot loop fix (watchdog timeout resolved)
@@ -2154,6 +2080,7 @@ lib_deps =
 - Sensor management system implemented
 
 **2025-11-14:** Initial CLAUDE.md creation
+
 - Comprehensive codebase documentation
 - Development workflows and conventions
 - Architecture and design patterns
@@ -2175,7 +2102,6 @@ This is a personal project. When contributing code:
 
 **End of CLAUDE.md**
 
-
 ---
 
 ## Recent Updates (2025-01-21)
@@ -2191,12 +2117,14 @@ Three major feature additions have been successfully implemented, tested, and me
 **Goal:** Make screen layouts easier to edit by centralizing hard-coded positions, font sizes, and spacing values.
 
 **Implementation:**
+
 - Created `src/display/ui_layout.h` with 150+ centralized constants
 - Organized into namespaces: `MonitorLayout`, `AlignmentLayout`, `GraphLayout`, `NetworkLayout`
 - Refactored all 4 UI files (`ui_monitor.cpp`, `ui_alignment.cpp`, `ui_graph.cpp`, `ui_network.cpp`)
 - Changed from scattered magic numbers to centralized, easily editable values
 
 **Example:**
+
 ```cpp
 // Before: Magic numbers scattered throughout code
 gfx.setCursor(10, 50);
@@ -2208,6 +2136,7 @@ gfx.setTextSize(MonitorLayout::TEMP_LABEL_FONT_SIZE);
 ```
 
 **Benefits:**
+
 - Easy editing: Change layout by modifying constants in one file
 - Consistency: All screens use organized constant sets
 - Maintainability: Clear intent and easy to understand
@@ -2217,12 +2146,14 @@ gfx.setTextSize(MonitorLayout::TEMP_LABEL_FONT_SIZE);
 **Goal:** Enable XPT2046 resistive touchscreen for basic navigation without requiring the physical button.
 
 **Implementation:**
+
 - Initialized XPT2046 touch controller in `display.h/cpp`
 - Proper calibration values (X: 300-3900, Y: 62000-65500 raw ADC)
 - Created `src/input/touch_handler.h/cpp` with touch zone detection
 - **Safety mechanism:** 5-second hold requirement for WiFi setup (prevents accidental activation)
 
 **Touch Zones:**
+
 - **Bottom of screen (Y > 280):** Tap to cycle display modes (instant, 300ms debounce)
 - **Top of screen (Y < 25):** Hold for 5 seconds to enter WiFi setup mode
   - Visual progress bar (0-100%) with cyan fill and percentage display
@@ -2230,12 +2161,14 @@ gfx.setTextSize(MonitorLayout::TEMP_LABEL_FONT_SIZE);
 - **Middle zone:** No action (safe zone)
 
 **Features:**
+
 - Debouncing: 300ms for footer tap to prevent double-activation
 - Progress bar: Visual feedback during 5-second hold
 - Cancellation: Releases hold if finger moves or lifts
 - Redundancy: Physical button still works (backup input method)
 
 **Serial Debug Output:**
+
 ```
 [TOUCH] Header hold started - hold for 5s to enter WiFi setup
 [TOUCH] Header hold complete - entering setup mode
@@ -2247,18 +2180,21 @@ gfx.setTextSize(MonitorLayout::TEMP_LABEL_FONT_SIZE);
 **Goal:** Implement CSV data logging to SD card for historical sensor tracking.
 
 **Implementation:**
+
 - Created `src/logging/data_logger.h/cpp` with DataLogger class
 - RTC-based timestamps and filenames
 - Automatic file rotation at 10MB
 - Web API endpoints for remote control
 
 **CSV Format:**
+
 ```csv
 Timestamp,TempX,TempYL,TempYR,TempZ,PSU_Voltage,Fan_RPM,Fan_Speed,Machine_State,Pos_X,Pos_Y,Pos_Z
 2025-01-21 15:12:00,26.3,26.4,26.2,26.4,13.52,0,30,IDLE,0,0,0
 ```
 
 **Features:**
+
 - **Filename:** `/logs/fluiddash_YYYYMMDD.csv` (daily files)
 - **Interval:** 10 seconds default (configurable 1s-10min)
 - **Timestamps:** RTC-based (`2025-01-21 15:12:00`) or uptime fallback
@@ -2267,6 +2203,7 @@ Timestamp,TempX,TempYL,TempYR,TempZ,PSU_Voltage,Fan_RPM,Fan_Speed,Machine_State,
 - **Disabled by default** to preserve SD card lifespan
 
 **Web API Endpoints:**
+
 ```
 POST /api/logs/enable     - Enable/disable logging + set interval
 GET  /api/logs/status     - Current logging status
@@ -2276,6 +2213,7 @@ DELETE /api/logs/clear    - Delete all log files
 ```
 
 **Example Usage:**
+
 ```javascript
 // Enable logging with 10-second interval
 fetch('/api/logs/enable', {
@@ -2291,6 +2229,7 @@ window.open('/api/logs/download?file=fluiddash_20250121.csv');
 ### Hardware Testing Confirmation
 
 All three phases tested on ESP32-2432S028 hardware:
+
 - ✅ Touchscreen calibration correct (zones work as expected)
 - ✅ 5-second hold safety mechanism prevents accidental WiFi setup
 - ✅ Progress bar displays correctly during hold
@@ -2302,6 +2241,7 @@ All three phases tested on ESP32-2432S028 hardware:
 ### Files Added/Modified
 
 **New Files (6):**
+
 - `src/display/ui_layout.h` - 150+ centralized layout constants
 - `src/input/touch_handler.h` - Touch input declarations
 - `src/input/touch_handler.cpp` - Touch zone detection and progress bar
@@ -2309,6 +2249,7 @@ All three phases tested on ESP32-2432S028 hardware:
 - `src/logging/data_logger.cpp` - CSV logging implementation
 
 **Modified Files (5):**
+
 - `src/display/display.cpp` - XPT2046 touch calibration
 - `src/display/ui_*.cpp` - Layout constant refactoring (4 files)
 - `src/main.cpp` - Touch handler integration, logger initialization
@@ -2332,6 +2273,7 @@ This session focused on production quality improvements, best practices implemen
 #### 1. Temperature Unit Selection (Celsius/Fahrenheit)
 
 **Implementation:**
+
 - User-selectable temperature unit in Settings page
 - Real-time conversion in web interface with JavaScript
 - LCD display respects user preference
@@ -2339,6 +2281,7 @@ This session focused on production quality improvements, best practices implemen
 - Auto-conversion for display throughout system
 
 **Files Modified:**
+
 - `data/web/settings.html` - Added unit selector with live conversion
 - `data/web/main.html` - Temperature display with correct unit
 - `data/web/admin.html` - Current readings in user's unit
@@ -2347,6 +2290,7 @@ This session focused on production quality improvements, best practices implemen
 - `src/display/ui_alignment.cpp` - Temperature display conversion
 
 **User Experience:**
+
 - Change dropdown: values instantly convert (30°C ↔ 86°F)
 - Save: stores as Celsius internally
 - Reload: displays in saved preference
@@ -2357,6 +2301,7 @@ This session focused on production quality improvements, best practices implemen
 **Issue:** Settings page cached by browser, showed stale values when navigating back from main page.
 
 **Solution:** Added no-cache headers to settings and admin pages
+
 ```cpp
 server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 server.sendHeader("Pragma", "no-cache");
@@ -2372,6 +2317,7 @@ server.sendHeader("Expires", "0");
 **Root Cause:** Network switch ARP cache didn't have FluidNC's MAC address for idle device.
 
 **Solution:** HTTP pre-connection to populate ARP cache before WebSocket attempt
+
 ```cpp
 // Send HTTP GET to FluidNC before WebSocket
 WiFiClient client;
@@ -2387,6 +2333,7 @@ if (client.connect(cfg.fluidnc_ip, 80)) {
 **Motivation:** Following embedded systems best practices for field deployment and troubleshooting.
 
 **Implementation:**
+
 - `resetToDefaults()` function clears entire NVS namespace
 - Web UI in admin page with prominent danger styling
 - Double confirmation dialogs prevent accidental activation
@@ -2394,12 +2341,14 @@ if (client.connect(cfg.fluidnc_ip, 80)) {
 - Auto-restart after reset
 
 **User Interface:**
+
 - Red border and danger colors
 - Two scary confirmation dialogs
 - Clear consequences listed
 - Restarts automatically to load defaults
 
 **Use Cases:**
+
 - User misconfiguration recovery
 - Field support ("try factory reset first")
 - Device redeployment
@@ -2410,6 +2359,7 @@ if (client.connect(cfg.fluidnc_ip, 80)) {
 **Added:** New LCD screen showing storage and logging status
 
 **Displays:**
+
 - SD card availability and free space
 - SPIFFS status and free space
 - Data logging enabled/disabled status
@@ -2417,6 +2367,7 @@ if (client.connect(cfg.fluidnc_ip, 80)) {
 - Total log file count
 
 **Benefits:**
+
 - At-a-glance storage status without web access
 - Useful for standalone operation
 - Know when SD card needs attention
@@ -2426,6 +2377,7 @@ if (client.connect(cfg.fluidnc_ip, 80)) {
 **Issue:** SD card write failure caused overnight system hang at 3:29 PM.
 
 **Solution:** Comprehensive error handling with graceful degradation
+
 - Failure counter tracks consecutive SD errors
 - Auto-disable logging after 5 failures
 - System continues operating even if SD fails
@@ -2436,11 +2388,13 @@ if (client.connect(cfg.fluidnc_ip, 80)) {
 #### 7. Configuration Cleanup
 
 **Removed:** Redundant `initDefaultConfig()` function
+
 - Function set defaults that were immediately overwritten by `loadConfig()`
 - Caused confusion with inconsistent defaults between functions
 - Reduced code by 39 lines
 
 **Benefits:**
+
 - Single source of truth for defaults (in `loadConfig()` calls)
 - No ambiguity about which defaults are used
 - Cleaner, more maintainable code
@@ -2449,14 +2403,15 @@ if (client.connect(cfg.fluidnc_ip, 80)) {
 
 Changed defaults to better user experience:
 
-| Setting | Old Default | New Default | Reason |
-|---------|-------------|-------------|---------|
-| `use_fahrenheit` | false | **true** | US market preference |
-| `enable_logging` | false | **true** | Logging ready out of box |
+| Setting          | Old Default | New Default | Reason                   |
+| ---------------- | ----------- | ----------- | ------------------------ |
+| `use_fahrenheit` | false       | **true**    | US market preference     |
+| `enable_logging` | false       | **true**    | Logging ready out of box |
 
 ### Debug Features Added
 
 **Serial Output:**
+
 - `[Settings] use_fahrenheit = X` - Shows current temp unit setting
 - `[API Save] use_fahrenheit received: X, set to: X` - Confirms save
 - `[FluidNC] ARP cache populated` - Connection diagnostics
@@ -2465,10 +2420,12 @@ Changed defaults to better user experience:
 ### Files Modified This Session
 
 **Configuration:**
+
 - `src/config/config.h` - Added resetToDefaults() declaration
 - `src/config/config.cpp` - Removed initDefaultConfig(), added resetToDefaults()
 
 **Web Interface:**
+
 - `data/web/settings.html` - Temperature unit selector with live conversion
 - `data/web/main.html` - Temperature display with unit from API
 - `data/web/admin.html` - Factory reset section, temp unit display
@@ -2476,6 +2433,7 @@ Changed defaults to better user experience:
 - `src/web/web_handlers.cpp` - No-cache headers, temp conversion, reset API
 
 **Display:**
+
 - `src/display/ui_layout.h` - Added StorageLayout namespace
 - `src/display/ui_monitor.cpp` - Added convertTemp() helper
 - `src/display/ui_alignment.cpp` - Temperature unit conversion
@@ -2484,12 +2442,15 @@ Changed defaults to better user experience:
 - `src/display/ui_modes.h` - Storage mode declarations
 
 **Network:**
+
 - `src/network/network.cpp` - HTTP pre-connection for ARP cache
 
 **Logging:**
+
 - `src/logging/data_logger.cpp` - SD error handling with auto-disable
 
 **Input:**
+
 - `src/input/touch_handler.cpp` - Updated mode cycle to 5 modes
 
 **Total:** 18 files modified, 8 commits
@@ -2497,6 +2458,7 @@ Changed defaults to better user experience:
 ### Testing Status
 
 All features tested on hardware:
+
 - ✅ Temperature unit toggle works in web and LCD
 - ✅ Settings page no longer caches (shows current values)
 - ✅ FluidNC connects reliably after reboot
@@ -2530,13 +2492,13 @@ The codebase has undergone comprehensive refactoring to achieve production-ready
 
 ### Code Metrics After Refactoring
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **main.cpp size** | 1,192 lines | 260 lines | 78% reduction |
-| **Web handlers** | In main.cpp | Extracted (813 lines) | 100% modular |
-| **Global variables** | Scattered | Structured | Professional |
-| **WebSocket code** | 25 lines in main | 1 function call | 96% cleaner |
-| **Module organization** | Partial | Complete | Production-ready |
+| Metric                  | Before           | After                 | Improvement      |
+| ----------------------- | ---------------- | --------------------- | ---------------- |
+| **main.cpp size**       | 1,192 lines      | 260 lines             | 78% reduction    |
+| **Web handlers**        | In main.cpp      | Extracted (813 lines) | 100% modular     |
+| **Global variables**    | Scattered        | Structured            | Professional     |
+| **WebSocket code**      | 25 lines in main | 1 function call       | 96% cleaner      |
+| **Module organization** | Partial          | Complete              | Production-ready |
 
 ### New Architecture Overview
 
@@ -2612,6 +2574,7 @@ extern TimingState timing;
 ```
 
 **Benefits:**
+
 - Clear ownership and organization
 - Easy to understand data flow
 - Consistent access patterns throughout codebase
@@ -2625,6 +2588,7 @@ All web-related code has been extracted to dedicated module:
 **File:** `src/web/web_handlers.cpp` (813 lines)
 
 **Contents:**
+
 - All HTTP request handlers (`handleRoot`, `handleSettings`, etc.)
 - All API endpoints (`handleAPIConfig`, `handleAPIStatus`, etc.)
 - All HTML generation functions
@@ -2632,6 +2596,7 @@ All web-related code has been extracted to dedicated module:
 - Complete isolation from main.cpp
 
 **Benefits:**
+
 - main.cpp focuses on core orchestration only
 - Web features can be tested independently
 - Easy to add new web endpoints
@@ -2644,12 +2609,14 @@ WebSocket handling logic fully consolidated:
 **Function:** `handleWebSocketLoop()` in `src/network/network.cpp`
 
 **Responsibilities:**
+
 - WebSocket event processing
 - FluidNC status polling
 - Connection management
 - Debug output (when enabled)
 
 **Integration in main.cpp:**
+
 ```cpp
 void loop() {
     server.handleClient();
@@ -2678,6 +2645,7 @@ void loop() {
 ### Testing Confirmation (2025-11-19)
 
 All refactoring changes have been:
+
 - ✅ Compiled successfully (no errors or warnings)
 - ✅ Uploaded to ESP32-2432S028 hardware
 - ✅ Tested with basic functionality checks
@@ -2719,4 +2687,3 @@ When working on this codebase:
 **Code Quality Grade:** A+ (Professional)  
 **Refactoring Status:** Complete ✅  
 **Production Status:** Ready ✅
-
