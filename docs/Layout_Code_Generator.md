@@ -27,6 +27,7 @@
 Adjusting hard-coded layout constants is tedious:
 
 **Current workflow:**
+
 1. Edit `ui_layout.h` → change `TEMP_LABEL_X = 10` to `= 25`
 2. Recompile firmware
 3. Upload to device
@@ -56,17 +57,17 @@ A **visual code generator** that runs in the browser:
 
 ### Advantages Over Runtime Configuration (INI/JSON)
 
-| Aspect | Runtime Config (INI) | Code Generator (This) |
-|--------|----------------------|------------------------|
-| **Complexity** | High (parser, loader, API) | Low (standalone HTML) |
-| **Boot risk** | Medium (file I/O, parsing) | Zero (dev tool only) |
-| **Memory overhead** | ~5-10KB (runtime structs) | Zero (hard-coded) |
-| **Performance** | Minimal overhead | Zero overhead |
-| **Type safety** | Runtime errors possible | Compile-time validated |
-| **Version control** | Config files separate | Code changes in git |
-| **User workflow** | Edit INI, reload device | Edit visually, paste code |
-| **Maintenance** | Backend + frontend | Frontend only |
-| **Use case** | Frequent layout changes | Initial setup + rare tweaks |
+| Aspect              | Runtime Config (INI)       | Code Generator (This)       |
+| ------------------- | -------------------------- | --------------------------- |
+| **Complexity**      | High (parser, loader, API) | Low (standalone HTML)       |
+| **Boot risk**       | Medium (file I/O, parsing) | Zero (dev tool only)        |
+| **Memory overhead** | ~5-10KB (runtime structs)  | Zero (hard-coded)           |
+| **Performance**     | Minimal overhead           | Zero overhead               |
+| **Type safety**     | Runtime errors possible    | Compile-time validated      |
+| **Version control** | Config files separate      | Code changes in git         |
+| **User workflow**   | Edit INI, reload device    | Edit visually, paste code   |
+| **Maintenance**     | Backend + frontend         | Frontend only               |
+| **Use case**        | Frequent layout changes    | Initial setup + rare tweaks |
 
 ### Perfect For Your Use Case
 
@@ -131,6 +132,7 @@ A **visual code generator** that runs in the browser:
 **Goal:** Adjust Monitor screen temperature display
 
 **With code generator (5 minutes):**
+
 1. Open `layout_generator.html` in browser
 2. Load current Monitor layout
 3. Select "Temperature" section
@@ -144,6 +146,7 @@ A **visual code generator** that runs in the browser:
 7. Compile, upload - done!
 
 **Without code generator (30+ minutes):**
+
 1. Edit `ui_layout.h` → change value
 2. Compile (30 seconds)
 3. Upload (10 seconds)
@@ -161,33 +164,39 @@ A **visual code generator** that runs in the browser:
 **Tasks:**
 
 1. **Adapt existing editor.html**
+   
    - Remove element creation tools (rect, line drawing)
    - Add layout section selector (Header, Temperature, Position, etc.)
    - Modify properties panel for constant editing
    - Keep canvas preview system
 
 2. **Implement JavaScript canvas rendering**
+   
    - Create `renderMonitorScreen(layout)` function
    - Match LCD output as closely as possible
    - Render all sections with current values
 
 3. **Add code generation**
+   
    - `generateCppCode()` function
    - Format as proper C++ namespace
    - Add comments for modified values
    - Display in textarea for copy/paste
 
 4. **Add value loading**
+   
    - Manual paste option (paste current constants)
    - Or simple input form to enter current values
    - Parse into layout object
 
 **Files:**
+
 - `data/web/layout_generator.html` (new, adapted from editor.html)
 
 **No backend changes needed!** Pure client-side tool.
 
 **Success Criteria:**
+
 - ✅ Can load current layout values
 - ✅ Canvas preview shows accurate representation
 - ✅ Value changes update canvas instantly
@@ -203,19 +212,23 @@ A **visual code generator** that runs in the browser:
 **Tasks:**
 
 1. **Add source code endpoint**
+   
    - `GET /api/layout/source?screen=monitor`
    - Returns current ui_layout.h constants as JSON
    - Generator can load with one click
 
 2. **Serve generator from device**
+   
    - Add endpoint: `GET /layout-generator`
    - Serve layout_generator.html
    - Access from any browser on network
 
 **Files Modified:**
+
 - `src/web/web_handlers.cpp` (add 2 endpoints)
 
 **Success Criteria:**
+
 - ✅ "Load Current Values" button works
 - ✅ No need to manually paste constants
 - ✅ Can access generator from device IP
@@ -530,21 +543,25 @@ function renderMonitorScreen(layout) {
 ### Interaction Flow
 
 **1. Load Values**
+
 - Click "Load Values" → Paste dialog opens
 - Paste current MonitorLayout constants
 - Or click "Load from Device" (if backend implemented)
 
 **2. Select Section**
+
 - Click section name in left panel
 - Canvas highlights that section
 - Properties panel shows all constants for section
 
 **3. Adjust Values**
+
 - Use number inputs or sliders
 - Canvas updates in real-time
 - Modified values show ⚠️ indicator
 
 **4. Generate Code**
+
 - Click "Generate Code" button
 - C++ code appears in bottom textarea
 - Click "Copy to Clipboard"
@@ -820,6 +837,7 @@ function copyCode() {
 ### Manual Testing Checklist
 
 **Phase 1: Core Functionality**
+
 - [ ] Load values by pasting C++ code
 - [ ] Parse constants correctly
 - [ ] Section list displays all sections
@@ -833,6 +851,7 @@ function copyCode() {
 - [ ] Modified indicators show correctly
 
 **Phase 2: Backend Integration (Optional)**
+
 - [ ] "Load from Device" button works
 - [ ] API endpoint returns correct JSON
 - [ ] Values load automatically
@@ -841,6 +860,7 @@ function copyCode() {
 ### Validation Tests
 
 **Generated Code Quality:**
+
 - [ ] Valid C++ syntax
 - [ ] Proper namespace structure
 - [ ] Correct constant naming (SCREAMING_SNAKE_CASE)
@@ -849,6 +869,7 @@ function copyCode() {
 - [ ] Produces identical LCD output to preview
 
 **Canvas Rendering Accuracy:**
+
 - [ ] Fonts match LCD output
 - [ ] Positions match LCD output
 - [ ] Colors close approximation
@@ -860,6 +881,7 @@ function copyCode() {
 ## Implementation Checklist
 
 ### Phase 1: Core Generator
+
 - [ ] Adapt editor.html to layout_generator.html
 - [ ] Remove element creation UI
 - [ ] Add section selector panel
@@ -872,6 +894,7 @@ function copyCode() {
 - [ ] **STOP: Core tool functional**
 
 ### Phase 2: Backend Integration (Optional)
+
 - [ ] Add GET /api/layout/source endpoint
 - [ ] Return current constants as JSON
 - [ ] Add GET /layout-generator endpoint
@@ -885,6 +908,7 @@ function copyCode() {
 ## Success Criteria
 
 **Phase 1 Success:**
+
 - ✅ Can load current layout constants
 - ✅ Can adjust values visually
 - ✅ Canvas shows accurate preview
@@ -893,6 +917,7 @@ function copyCode() {
 - ✅ LCD output matches preview
 
 **Overall Success:**
+
 - ✅ Layout iteration is 10x faster than edit-compile-test
 - ✅ Tool is easy to use for any developer
 - ✅ No runtime complexity added to firmware
@@ -906,29 +931,35 @@ function copyCode() {
 ### Post-v1.0 Ideas
 
 **1. All Screen Modes**
+
 - Implement canvas rendering for Alignment, Graph, Network, Storage modes
 - Same workflow for all screens
 
 **2. Presets**
+
 - Save/load preset layouts
 - "Compact", "Large Fonts", "High Contrast" presets
 - Export/import JSON files
 
 **3. Grid Snapping**
+
 - Optional grid overlay on canvas
 - Snap values to 5px increments
 - Alignment guides
 
 **4. Undo/Redo**
+
 - History stack for value changes
 - Ctrl+Z / Ctrl+Y keyboard shortcuts
 
 **5. Live Device Preview**
+
 - WebSocket connection to device
 - Send values to device for live preview
 - See changes on actual LCD in real-time
 
 **6. Batch Operations**
+
 - Shift all values in section by N pixels
 - Scale all font sizes by percentage
 - Copy section from one mode to another
@@ -938,23 +969,27 @@ function copyCode() {
 ## Notes for Implementation
 
 ### Prerequisites
+
 - Existing editor.html as starting point
 - Understanding of current ui_layout.h structure
 - Browser with HTML5 canvas support
 
 ### Recommended Approach
+
 1. Start with Monitor mode only
 2. Perfect the canvas rendering
 3. Test code generation thoroughly
 4. Expand to other modes after validation
 
 ### Time Estimate
+
 - Phase 1 (core tool): 2-3 hours
 - Phase 2 (backend): 1 hour
 - Testing: 30 minutes
 - **Total: 3-4 hours**
 
 ### Success Indicators
+
 - ✅ First compile after using tool succeeds
 - ✅ LCD output matches preview exactly
 - ✅ Tool saves hours on layout design
