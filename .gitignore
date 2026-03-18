@@ -3,3 +3,19 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# PlatformIO - keep extensions.json (documents recommended extensions for collaborators)
+# .vscode/extensions.json  ← intentionally NOT ignored
+
+.claude/
+.archive/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python temp scripts (we use these for file operations)
+*.py.tmp
+temp_*.py
+append_*.py
